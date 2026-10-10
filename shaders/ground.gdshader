@@ -6,8 +6,8 @@ shader_type spatial;
 #include "res://shaders/include/fx.gdshaderinc"
 #include "res://shaders/include/toon_light.gdshaderinc"
 
-uniform vec3 patch_dark = vec3(0.8, 0.9, 0.72);
-uniform vec3 patch_light = vec3(1.14, 1.1, 0.86);
+uniform vec3 patch_dark = vec3(0.68, 0.78, 0.62);
+uniform vec3 patch_light = vec3(0.98, 0.96, 0.78);
 uniform float patch_scale = 0.14;
 uniform float detail_scale = 1.3;
 uniform float facet_softening : hint_range(0.0, 1.0) = 0.55;

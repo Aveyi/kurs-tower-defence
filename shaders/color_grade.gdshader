@@ -3,11 +3,11 @@
 shader_type canvas_item;
 
 uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
-uniform float saturation = 1.12;
+uniform float saturation = 1.06;
 uniform float contrast = 1.05;
 uniform vec3 shadow_tint : source_color = vec3(0.88, 0.94, 1.0);
 uniform vec3 highlight_tint : source_color = vec3(1.04, 1.0, 0.93);
-uniform float vignette = 0.35;
+uniform float vignette = 0.45;
 uniform vec3 vignette_color : source_color = vec3(0.16, 0.09, 0.05);
 
 void fragment() {

@@ -60,6 +60,7 @@ const PRESETS := {
 static var _process_materials := {}
 static var _draw_meshes := {}
 static var _sphere: SphereMesh
+static var _label_font: Font = preload("res://assets/fonts/title_font.tres")
 
 
 ## One-shot particle burst at `at`. `direction` turns the preset's main direction (e.g. a muzzle).
@@ -124,7 +125,8 @@ static func impact(parent: Node, at: Vector3, color: Color, radius: float) -> vo
 static func floating_text(parent: Node, at: Vector3, text: String, color: Color) -> void:
 	var label := Label3D.new()
 	label.text = text
-	label.font_size = 56
+	label.font = _label_font
+	label.font_size = 60
 	label.outline_size = 14
 	label.pixel_size = 0.006
 	label.modulate = color

@@ -108,6 +108,7 @@ func _refresh() -> void:
 func _title(text: String, size: int) -> Label:
 	var label := Label.new()
 	label.text = text
+	label.theme_type_variation = &"TitleLabel"
 	label.add_theme_font_size_override(&"font_size", size)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	return label
@@ -116,8 +117,8 @@ func _title(text: String, size: int) -> Label:
 func _section(text: String) -> void:
 	var label := Label.new()
 	label.text = text
-	label.add_theme_font_size_override(&"font_size", 26)
-	label.add_theme_color_override(&"font_color", Color(0.98, 0.84, 0.45))
+	label.theme_type_variation = &"TitleLabel"
+	label.add_theme_font_size_override(&"font_size", 28)
 	_grid.add_child(label)
 	_grid.add_child(Control.new())
 

@@ -27,8 +27,8 @@ func _ready() -> void:
 	add_child(root)
 	var title := Label.new()
 	title.text = "Выбор уровня"
-	title.add_theme_font_size_override(&"font_size", 56)
-	title.add_theme_color_override(&"font_color", Color(0.98, 0.84, 0.45))
+	title.theme_type_variation = &"TitleLabel"
+	title.add_theme_font_size_override(&"font_size", 60)
 	title.add_theme_constant_override(&"outline_size", 12)
 	root.add_child(title)
 
@@ -73,14 +73,15 @@ func _card(number: int, entry: Dictionary) -> Control:
 
 	var name := Label.new()
 	name.text = "%d. %s" % [number, level.display_name]
-	name.add_theme_font_size_override(&"font_size", 30)
+	name.theme_type_variation = &"TitleLabel"
+	name.add_theme_font_size_override(&"font_size", 32)
 	box.add_child(name)
 
 	var description := Label.new()
 	description.text = level.description
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	description.custom_minimum_size = Vector2(480, 0)
-	description.add_theme_font_size_override(&"font_size", 18)
+	description.add_theme_font_size_override(&"font_size", 20)
 	description.modulate = Color(1, 1, 1, 0.85)
 	box.add_child(description)
 
@@ -125,14 +126,16 @@ func _locked_card(number: int) -> Control:
 	panel.add_child(box)
 	var mark := Label.new()
 	mark.text = "?"
-	mark.add_theme_font_size_override(&"font_size", 220)
+	mark.theme_type_variation = &"TitleLabel"
+	mark.add_theme_font_size_override(&"font_size", 240)
 	mark.add_theme_color_override(&"font_color", Color(0.45, 0.42, 0.38))
 	mark.add_theme_constant_override(&"outline_size", 0)
 	mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(mark)
 	var caption := Label.new()
 	caption.text = "Уровень %d — в разработке" % number
-	caption.add_theme_font_size_override(&"font_size", 28)
+	caption.theme_type_variation = &"TitleLabel"
+	caption.add_theme_font_size_override(&"font_size", 30)
 	caption.add_theme_color_override(&"font_color", Color(0.6, 0.56, 0.5))
 	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(caption)

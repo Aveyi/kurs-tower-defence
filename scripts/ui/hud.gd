@@ -5,6 +5,9 @@ extends CanvasLayer
 var game: Game
 var _tower_buttons := {}  # TowerData -> Button
 var _banner_tween: Tween
+var _boss_tween: Tween
+## True while the mouse is over the upgrade button: the panel previews the next level.
+var _upgrade_hover := false
 
 @onready var gold_label: Label = %GoldLabel
 @onready var lives_label: Label = %LivesLabel
@@ -18,7 +21,10 @@ var _banner_tween: Tween
 @onready var tower_icon: TextureRect = %TowerIcon
 @onready var tower_name: Label = %TowerName
 @onready var tower_level: Label = %TowerLevel
-@onready var tower_stats: Label = %TowerStats
+@onready var tower_stats: RichTextLabel = %TowerStats
+@onready var boss_warning: Control = %BossWarning
+@onready var boss_title: Label = %BossTitle
+@onready var boss_subtitle: Label = %BossSubtitle
 @onready var upgrade_button: Button = %UpgradeButton
 @onready var sell_button: Button = %SellButton
 @onready var banner: Label = %Banner
@@ -34,6 +40,9 @@ func _ready() -> void:
 	pause_menu.hide()
 	end_screen.hide()
 	banner.modulate.a = 0.0
+	boss_warning.modulate.a = 0.0
+	upgrade_button.mouse_entered.connect(_set_upgrade_hover.bind(true))
+	upgrade_button.mouse_exited.connect(_set_upgrade_hover.bind(false))
 	next_wave_button.pressed.connect(func() -> void: game.start_next_wave())
 	speed_button.pressed.connect(_toggle_speed)
 	pause_button.pressed.connect(_toggle_pause)
@@ -104,6 +113,12 @@ func _on_lives_changed(lives: int) -> void:
 func _on_wave_started(index: int, total: int) -> void:
 	wave_label.text = "Волна %d / %d" % [index + 1, total]
 	_show_banner("Волна %d" % (index + 1) if index + 1 < total else "Последняя волна!")
+	var bosses := PackedStringArray()
+	for group in game.level.waves[index].groups:
+		if group.enemy.is_boss and not group.enemy.display_name in bosses:
+			bosses.append(group.enemy.display_name)
+	if not bosses.is_empty():
+		_show_boss_warning(bosses)
 
 
 func _on_countdown_changed(seconds: float) -> void:
@@ -184,23 +199,29 @@ func _on_tower_selected(tower: Tower) -> void:
 
 func _refresh_tower_panel(tower: Tower) -> void:
 	var s := tower.stats()
+	var preview := _upgrade_hover and tower.can_upgrade()
+	var n: TowerLevel = tower.data.levels[tower.level + 1] if preview else s
 	tower_icon.texture = tower.data.icon
 	tower_name.text = tower.data.display_name
 	tower_level.text = "Уровень %d из %d" % [tower.level + 1, tower.data.levels.size()]
+	if preview:
+		tower_level.text += "  →  %d" % (tower.level + 2)
 	var lines := PackedStringArray([
-		"Урон: %s" % _num(s.damage),
-		"Дальность: %s м" % _num(s.attack_range),
-		"Выстрелов в секунду: %s" % _num(s.fire_rate),
+		"Урон: %s" % _change(s.damage, n.damage),
+		"Дальность: %s" % _change(s.attack_range, n.attack_range, " м"),
+		"Выстрелов в секунду: %s" % _change(s.fire_rate, n.fire_rate),
 		"Цели: %s" % tower.data.targets_text(),
 		"Приоритет: %s" % tower.data.priority_text(),
 	])
 	if tower.data.air_damage_multiplier != 1.0:
 		lines.append("Урон по летающим: ×%s" % _num(tower.data.air_damage_multiplier))
-	if s.splash_radius > 0.0:
-		lines.append("Урон по площади: %s м" % _num(s.splash_radius))
-	if s.slow_factor < 1.0:
-		lines.append("Замедление: −%d%% на %s с" % [roundi((1.0 - s.slow_factor) * 100), _num(s.slow_duration)])
+	if s.splash_radius > 0.0 or n.splash_radius > 0.0:
+		lines.append("Урон по площади: %s" % _change(s.splash_radius, n.splash_radius, " м"))
+	if s.slow_factor < 1.0 or n.slow_factor < 1.0:
+		lines.append("Замедление: %s на %s" % [_change(roundi((1.0 - s.slow_factor) * 100),
+				roundi((1.0 - n.slow_factor) * 100), "%", "−"), _change(s.slow_duration, n.slow_duration, " с")])
 	tower_stats.text = "\n".join(lines)
+	game.build.show_range(n.attack_range)
 	if tower.can_upgrade():
 		upgrade_button.text = "Улучшить — %d" % tower.upgrade_cost()
 		upgrade_button.disabled = false
@@ -227,6 +248,19 @@ func _on_sell_pressed() -> void:
 		game.build.clear()
 
 
+func _set_upgrade_hover(on: bool) -> void:
+	_upgrade_hover = on
+	if tower_panel.visible and game.build.selected_tower:
+		_refresh_tower_panel(game.build.selected_tower)
+
+
+## "70" when unchanged, otherwise "70 → 85" with the new value highlighted.
+static func _change(current: float, next: float, unit := "", prefix := "") -> String:
+	if is_equal_approx(current, next):
+		return prefix + _num(current) + unit
+	return "%s%s%s [color=#9cf06a][b]→ %s%s%s[/b][/color]" % [prefix, _num(current), unit, prefix, _num(next), unit]
+
+
 static func _num(value: float) -> String:
 	return str(int(value)) if is_equal_approx(value, roundf(value)) else "%.1f" % value
 
@@ -240,6 +274,27 @@ func _show_banner(text: String, hold := 1.8) -> void:
 	_banner_tween.tween_property(banner, "modulate:a", 1.0, 0.3)
 	_banner_tween.tween_interval(hold)
 	_banner_tween.tween_property(banner, "modulate:a", 0.0, 0.6)
+
+
+func _show_boss_warning(bosses: PackedStringArray) -> void:
+	var names := " и ".join(bosses)
+	boss_title.text = ("Приближаются %s" if bosses.size() > 1 else "Приближается %s") % names
+	boss_subtitle.text = "Боссы вступают в бой" if bosses.size() > 1 else "Босс вступает в бой"
+	Audio.play(&"summon", -2.0)
+	if _boss_tween:
+		_boss_tween.kill()
+	boss_warning.pivot_offset = boss_warning.size / 2.0
+	boss_warning.scale = Vector2(1.25, 1.25)
+	_boss_tween = create_tween()
+	_boss_tween.tween_interval(1.4)  # after the wave banner and horn
+	_boss_tween.tween_property(boss_warning, "modulate:a", 1.0, 0.35)
+	_boss_tween.parallel().tween_property(boss_warning, "scale", Vector2.ONE, 0.5) \
+			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	for i in 2:  # a menacing pulse
+		_boss_tween.tween_property(boss_title, "modulate", Color(1.4, 1.1, 1.1), 0.35)
+		_boss_tween.tween_property(boss_title, "modulate", Color.WHITE, 0.35)
+	_boss_tween.tween_interval(1.2)
+	_boss_tween.tween_property(boss_warning, "modulate:a", 0.0, 0.8)
 
 
 func _on_game_over(victory: bool) -> void:

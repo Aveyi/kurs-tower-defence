@@ -18,6 +18,7 @@ var selected_tower: Tower
 var _hover: MeshInstance3D
 var _selection: MeshInstance3D
 var _ring: MeshInstance3D
+var _press_on_map := false
 
 
 func setup(owner_game: Game) -> void:
@@ -57,10 +58,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseMotion:
 		_update_hover(event.position)
-	elif event is InputEventMouseButton and event.pressed:
-		if event.button_index == MOUSE_BUTTON_LEFT:
-			_click(event.position)
-		elif event.button_index == MOUSE_BUTTON_RIGHT:
+	elif event is InputEventMouseButton:
+		# select on release, unless the press turned into a camera rotation (see CameraRig)
+		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			_press_on_map = true
+		elif event.button_index == MOUSE_BUTTON_LEFT:
+			if _press_on_map and not game.camera_rig.rotated_since_press:
+				_click(event.position)
+			_press_on_map = false
+		elif event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
 			clear()
 
 

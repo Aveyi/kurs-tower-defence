@@ -1,7 +1,8 @@
 class_name CameraRig
 extends Node3D
 ## Strategy camera.
-## Pan: WASD / arrows, middle mouse drag. Rotate: Q / E.
+## Pan: WASD / arrows, middle mouse drag. Rotate: Q / E or hold the left button and drag
+## (sideways turns, up/down tilts). A short left click without dragging is left to BuildController.
 ## Zoom: mouse wheel, trackpad pinch or two-finger scroll, +/- keys.
 ## Close up the camera tilts toward the horizon and aims a bit higher, so the models are seen
 ## from the side; far away it looks down on the whole map.
@@ -24,6 +25,16 @@ var _distance := 26.0
 var _target_distance := 26.0
 var _yaw := 0.0
 var _dragging := false
+## Left button: pressed on the map, and whether it has moved far enough to count as a rotation.
+var _lmb_down := false
+var _lmb_travel := 0.0
+var _pitch_offset := 0.0
+## True from the moment a left-button drag starts rotating until the next left press.
+var rotated_since_press := false
+
+const DRAG_THRESHOLD := 6.0
+const MOUSE_YAW_SPEED := 0.004
+const MOUSE_PITCH_SPEED := 0.08
 var _shake := 0.0
 
 @onready var camera: Camera3D = $Camera3D
@@ -49,6 +60,8 @@ func zoom_by(factor: float) -> void:
 
 func _process(delta: float) -> void:
 	var real_delta := delta / maxf(Engine.time_scale, 0.001)
+	if _lmb_down and not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		_lmb_down = false  # released over the HUD, which ate the event
 	var move := Input.get_vector(&"cam_left", &"cam_right", &"cam_forward", &"cam_back")
 	_yaw += Input.get_axis(&"cam_rotate_right", &"cam_rotate_left") * rotate_speed * real_delta
 	position += Basis(Vector3.UP, _yaw) * Vector3(move.x, 0, move.y) * pan_speed * real_delta * (_distance / 26.0)
@@ -75,10 +88,21 @@ func _unhandled_input(event: InputEvent) -> void:
 					zoom_by(pow(1.0 / 0.88, notch))
 			MOUSE_BUTTON_MIDDLE:
 				_dragging = event.pressed
+			MOUSE_BUTTON_LEFT:
+				_lmb_down = event.pressed
+				if event.pressed:
+					_lmb_travel = 0.0
+					rotated_since_press = false
 	elif event is InputEventMagnifyGesture:  # trackpad pinch
 		zoom_by(1.0 / event.factor)
 	elif event is InputEventPanGesture:  # trackpad two-finger scroll
 		zoom_by(exp(event.delta.y * 0.08))
+	elif event is InputEventMouseMotion and _lmb_down:
+		_lmb_travel += event.relative.length()
+		if _lmb_travel > DRAG_THRESHOLD:
+			rotated_since_press = true
+			_yaw -= event.relative.x * MOUSE_YAW_SPEED
+			_pitch_offset = clampf(_pitch_offset + event.relative.y * MOUSE_PITCH_SPEED, -20.0, 20.0)
 	elif event is InputEventMouseMotion and _dragging:
 		var k := _distance / 900.0
 		position += Basis(Vector3.UP, _yaw) * Vector3(-event.relative.x, 0, -event.relative.y) * k
@@ -90,7 +114,7 @@ func _apply() -> void:
 		position.z = clampf(position.z, bounds.position.y, bounds.end.y)
 	rotation.y = _yaw
 	var t := inverse_lerp(min_distance, max_distance, _distance)
-	var pitch := deg_to_rad(lerpf(pitch_near, pitch_far, sqrt(t)))
+	var pitch := deg_to_rad(clampf(lerpf(pitch_near, pitch_far, sqrt(t)) + _pitch_offset, 15.0, 80.0))
 	var look := Vector3(0, lerpf(look_height_near, 0.0, t), 0)
 	camera.position = look + Vector3(0, sin(pitch) * _distance, cos(pitch) * _distance)
 	camera.rotation = Vector3(-pitch, 0, 0)

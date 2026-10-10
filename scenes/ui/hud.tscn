@@ -6,6 +6,14 @@
 [ext_resource type="Texture2D" path="res://assets/ui/icons/heart.png" id="4_heart"]
 [ext_resource type="Texture2D" path="res://assets/ui/icons/wave.png" id="5_wave"]
 
+[sub_resource type="Gradient" id="Gradient_shade"]
+offsets = PackedFloat32Array(0, 0.25, 0.75, 1)
+colors = PackedColorArray(0.06, 0.01, 0.02, 0, 0.06, 0.01, 0.02, 0.72, 0.06, 0.01, 0.02, 0.72, 0.06, 0.01, 0.02, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_shade"]
+gradient = SubResource("Gradient_shade")
+fill_to = Vector2(1, 0)
+
 [node name="HUD" type="CanvasLayer"]
 process_mode = 3
 script = ExtResource("1_hud")
@@ -125,6 +133,7 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="Title" type="Label" parent="Root/BuildPanel/VBox"]
+theme_type_variation = &"TitleLabel"
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
 text = "Постройка башни"
@@ -172,6 +181,7 @@ size_flags_horizontal = 3
 alignment = 1
 
 [node name="TowerName" type="Label" parent="Root/TowerPanel/VBox/Header/Names"]
+theme_type_variation = &"TitleLabel"
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
@@ -183,13 +193,17 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.85, 0.72, 0.45, 1)
 text = "Уровень 1 из 3"
 
-[node name="TowerStats" type="Label" parent="Root/TowerPanel/VBox"]
+[node name="TowerStats" type="RichTextLabel" parent="Root/TowerPanel/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_font_sizes/font_size = 19
+theme_override_colors/default_color = Color(0.97, 0.91, 0.76, 1)
+theme_override_font_sizes/normal_font_size = 20
+theme_override_font_sizes/bold_font_size = 20
+bbcode_enabled = true
 text = "Урон: 10"
-autowrap_mode = 2
+fit_content = true
+scroll_active = false
 
 [node name="UpgradeButton" type="Button" parent="Root/TowerPanel/VBox"]
 unique_name_in_owner = true
@@ -206,6 +220,7 @@ focus_mode = 0
 text = "Продать"
 
 [node name="Banner" type="Label" parent="Root"]
+theme_type_variation = &"TitleLabel"
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 10
@@ -219,6 +234,60 @@ text = "Волна 1"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="BossWarning" type="Control" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -120.0
+offset_bottom = 80.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Shade" type="TextureRect" parent="Root/BossWarning"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_shade")
+expand_mode = 1
+
+[node name="Box" type="VBoxContainer" parent="Root/BossWarning"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+alignment = 1
+
+[node name="BossTitle" type="Label" parent="Root/BossWarning/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+theme_override_colors/font_color = Color(1, 0.42, 0.3, 1)
+theme_override_colors/font_outline_color = Color(0.12, 0.02, 0.03, 1)
+theme_override_constants/outline_size = 16
+theme_override_font_sizes/font_size = 76
+text = "Приближается Некромант"
+horizontal_alignment = 1
+
+[node name="BossSubtitle" type="Label" parent="Root/BossWarning/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.86, 0.72, 1)
+theme_override_constants/outline_size = 10
+theme_override_font_sizes/font_size = 28
+text = "Босс"
+horizontal_alignment = 1
+
 [node name="Hint" type="Label" parent="Root"]
 modulate = Color(1, 1, 1, 0.75)
 layout_mode = 1
@@ -226,12 +295,12 @@ anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
 offset_left = 20.0
-offset_top = -64.0
-offset_right = 560.0
+offset_top = -72.0
+offset_right = 760.0
 offset_bottom = -14.0
 grow_vertical = 0
-theme_override_font_sizes/font_size = 15
-text = "ЛКМ — площадка / башня, ПКМ — отмена, WASD — камера, Q/E — поворот
+theme_override_font_sizes/font_size = 18
+text = "ЛКМ — площадка / башня, ПКМ — отмена, WASD — камера, Q/E или зажатая ЛКМ — поворот
 Масштаб: колесо, щипок на трекпаде или +/−. Пробел — волна, F — скорость"
 
 [node name="PauseMenu" type="Control" parent="Root"]
@@ -333,6 +402,7 @@ layout_mode = 2
 theme_override_constants/separation = 14
 
 [node name="EndTitle" type="Label" parent="Root/EndScreen/Center/Panel/VBox"]
+theme_type_variation = &"TitleLabel"
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 56

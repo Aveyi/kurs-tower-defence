@@ -1,5 +1,8 @@
 [gd_resource type="Theme" format=3]
 
+[ext_resource type="FontVariation" path="res://assets/fonts/ui_font.tres" id="1_ui_font"]
+[ext_resource type="FontVariation" path="res://assets/fonts/title_font.tres" id="2_title_font"]
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 content_margin_left = 18.0
 content_margin_top = 12.0
@@ -101,7 +104,8 @@ corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
 [resource]
-default_font_size = 20
+default_font = ExtResource("1_ui_font")
+default_font_size = 22
 Button/colors/font_color = Color(0.97, 0.91, 0.76, 1)
 Button/colors/font_hover_color = Color(1, 0.96, 0.82, 1)
 Button/colors/font_pressed_color = Color(0.92, 0.82, 0.6, 1)
@@ -122,3 +126,6 @@ PanelContainer/styles/panel = SubResource("StyleBoxFlat_panel")
 TooltipLabel/colors/font_color = Color(0.97, 0.91, 0.76, 1)
 TooltipLabel/font_sizes/font_size = 18
 TooltipPanel/styles/panel = SubResource("StyleBoxFlat_tooltip")
+TitleLabel/base_type = &"Label"
+TitleLabel/colors/font_color = Color(0.98, 0.84, 0.45, 1)
+TitleLabel/fonts/font = ExtResource("2_title_font")

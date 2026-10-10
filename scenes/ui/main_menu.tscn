@@ -56,8 +56,8 @@ grow_vertical = 2
 theme_override_constants/separation = 18
 
 [node name="Title" type="Label" parent="VBox"]
+theme_type_variation = &"TitleLabel"
 layout_mode = 2
-theme_override_colors/font_color = Color(0.98, 0.84, 0.45, 1)
 theme_override_constants/outline_size = 14
 theme_override_font_sizes/font_size = 84
 text = "Стражи Крепости"
