@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://models/enemies/ghost_knight.glb" id="2_model"]
+[ext_resource type="Texture2D" path="res://assets/ui/icons/ghost_knight.png" id="3_icon"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"ghost_knight"
+display_name = "Рыцарь-призрак"
+icon = ExtResource("3_icon")
+model = ExtResource("2_model")
+max_hp = 2000.0
+speed = 1.1
+anim_speed = 1.0
+reward = 150
+damage = 10
+flying = false
+is_boss = true
+hp_bar_height = 2.9
+aim_height = 1.6
+phase_duration = 1.0
+phase_interval = 4.0

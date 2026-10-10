@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="MapTheme" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/map_theme.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+tile_prefix = "haunt_"
+trees = PackedStringArray("gnarled_tree_1", "gnarled_tree_2", "dead_spruce", "gnarled_tree_2", "dead_spruce")
+small_props = PackedStringArray("dead_bush", "dead_bush", "glow_mushrooms", "bones", "rock_1", "rock_2", "hollow_stump", "grave_3")
+rocks = PackedStringArray("rock_3", "rock_2")
+castle_props = PackedStringArray("crates", "well", "ghost_lantern", "scarecrow")
+road_light = "ghost_lantern"
+landmarks = PackedStringArray("ruin_columns", "ruin_arch", "ruin_wall", "ritual_stones", "crypt", "obelisk", "witch_cauldron", "grave_open")
+cemetery_tiles = PackedStringArray("haunt_graves_1", "haunt_graves_2", "haunt_graves_3")
+cemetery_fence = "cemetery_fence"
+cemetery_gate = "cemetery_gate"
+shadow_tiles = PackedStringArray("bridge", "haunt_graves_1", "haunt_graves_2", "haunt_graves_3")

@@ -7,6 +7,8 @@ extends Resource
 ##   #  road           S  enemy portal (road start)
 ##   ~  river          =  bridge (road over the river)
 ##   P  tower plot     C  castle (a 3x2 block; the road enters through its middle column)
+##   G  cemetery (graves tiles, fenced; a gate where a road enters it)
+##   R  landmark (one big piece from the theme: ruins, crypt, standing stones...)
 ## Roads may fork and rejoin: enemies are spread over every route from the portal to the gate.
 ## Keep separate branches from touching each other sideways, or the tiles will join them.
 
@@ -18,6 +20,10 @@ extends Resource
 @export var layout: PackedStringArray
 ## Battle music: a track in assets/audio/music (built by tools/audio/build_audio.py).
 @export var music := &"battle"
+## Tiles and decorations; empty = the level 1 kingdom set (see MapTheme).
+@export var map_theme: MapTheme
+## Look of the in-game HUD: "kingdom" (warm wood and gold) or "haunted" (dark violet, see Hud._apply_style).
+@export var hud_style := &"kingdom"
 @export var start_gold := 220
 @export var lives := 20
 ## Enemy HP multiplier for wave n (counted from 0): 1 + hp_growth * n ^ hp_growth_power.

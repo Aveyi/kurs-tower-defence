@@ -42,3 +42,9 @@ extends Resource
 @export var slam_radius := 6.5
 ## Seconds between slams; the enemy only slams when a tower is in reach.
 @export var slam_interval := 10.0
+
+@export_group("Ghost")
+## Seconds the enemy stays intangible: shots pass through, no damage, no slow (0 = not a ghost).
+@export var phase_duration := 0.0
+## Seconds between becoming intangible.
+@export var phase_interval := 4.0

@@ -1,8 +1,16 @@
 class_name Hud
 extends CanvasLayer
 ## In-game interface: resource bar, build and tower panels, wave banner, pause menu and end screen.
+## Levels pick a look with LevelData.hud_style; the scene itself is the default "kingdom" style.
+
+const HAUNTED_THEME := preload("res://assets/ui/theme_haunted.tres")
+const FRAME_SHADER := preload("res://shaders/ui_haunted_frame.gdshader")
+const OVERLAY_SHADER := preload("res://shaders/ui_haunted_overlay.gdshader")
 
 var game: Game
+## Animated frame materials of the "haunted" style (null in the default style).
+var _panel_material: ShaderMaterial
+var _button_material: ShaderMaterial
 var _tower_buttons := {}  # TowerData -> Button
 var _banner_tween: Tween
 var _boss_tween: Tween
@@ -68,6 +76,7 @@ func setup(owner_game: Game) -> void:
 	game.build.selection_cleared.connect(_on_selection_cleared)
 	for data in game.tower_types:
 		_add_tower_button(data)
+	_apply_style(game.level.hud_style)
 	Audio.wire_buttons(self)
 	_on_gold_changed(game.gold)
 	lives_label.text = str(game.lives)
@@ -137,14 +146,64 @@ func _toggle_speed() -> void:
 
 func _open_settings() -> void:
 	var menu := SettingsMenu.new()
+	menu.theme = $Root.theme
 	pause_menu.hide()
 	menu.closed.connect(func() -> void: pause_menu.show())
 	$Root.add_child(menu)
+	_style_frames(menu)
 
 
 func _toggle_pause() -> void:
 	get_tree().paused = not get_tree().paused
 	pause_menu.visible = get_tree().paused
+
+
+# --- styles --------------------------------------------------------------------------------
+## "haunted" (level 2): dark violet frames with tarnished silver edges and corner rune gems, a wave of light
+## running along the frames, mist in the panels and around the screen edges, cold lavender text.
+func _apply_style(style: StringName) -> void:
+	if style != &"haunted":
+		return
+	$Root.theme = HAUNTED_THEME
+	_panel_material = ShaderMaterial.new()
+	_panel_material.shader = FRAME_SHADER
+	_button_material = ShaderMaterial.new()
+	_button_material.shader = FRAME_SHADER
+	_button_material.set_shader_parameter(&"mist_strength", 0.0)
+	_button_material.set_shader_parameter(&"glow_strength", 0.6)
+	_style_frames($Root)
+	var mist := ColorRect.new()
+	mist.name = "Mist"
+	mist.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mist.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	mist.material = ShaderMaterial.new()
+	mist.material.shader = OVERLAY_SHADER
+	$Root.add_child(mist)
+	$Root.move_child(mist, 0)  # behind every panel
+	tower_level.add_theme_color_override(&"font_color", Color(0.72, 0.62, 0.9))
+	tower_stats.add_theme_color_override(&"default_color", Color(0.88, 0.86, 0.96))
+	boss_title.add_theme_color_override(&"font_color", Color(0.86, 0.52, 1.0))
+	boss_title.add_theme_color_override(&"font_outline_color", Color(0.08, 0.02, 0.12))
+	boss_subtitle.add_theme_color_override(&"font_color", Color(0.86, 0.82, 0.96))
+	var shade: TextureRect = boss_warning.get_node("Shade")
+	var gradient: Gradient = (shade.texture as GradientTexture2D).gradient.duplicate()
+	for i in gradient.get_point_count():
+		gradient.set_color(i, Color(0.05, 0.01, 0.09, gradient.get_color(i).a))
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill_to = Vector2(1, 0)
+	shade.texture = texture
+
+
+## Gives the panels and buttons under `root` the animated frame materials (haunted style only).
+func _style_frames(root: Node) -> void:
+	if _panel_material == null:
+		return
+	for node in root.find_children("*", "", true, false):
+		if node is PanelContainer:
+			node.material = _panel_material
+		elif node is Button:
+			node.material = _button_material
 
 
 # --- build panel ---------------------------------------------------------------------------

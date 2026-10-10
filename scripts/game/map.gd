@@ -1,7 +1,8 @@
 class_name Map
 extends Node3D
-## Builds the level from LevelData.layout:
+## Builds the level from LevelData.layout with the tiles and decorations of LevelData.map_theme:
 ## - tiles, road and river ones auto-picked and rotated from their neighbours;
+## - a fenced cemetery with gates where roads enter it;
 ## - the enemy portal, the castle and decorations;
 ## - one enemy route (Curve3D) for every way along the road network from the portal to the
 ##   castle gate; forks and rejoining branches are allowed.
@@ -16,18 +17,16 @@ const ROAD_TILES := {
 	"road_end": [2], "road_straight": [0, 2], "road_corner": [2, 1], "road_t": [0, 2, 1], "road_cross": [0, 1, 2, 3],
 }
 const RIVER_TILES := {"river_straight": [0, 2], "river_corner": [2, 1]}
-const TREES: Array[String] = ["pine_1", "pine_2", "oak_1", "pine_1", "pine_2", "oak_2"]
-const SMALL_PROPS: Array[String] = ["bush_1", "bush_2", "rock_1", "rock_2", "mushrooms", "stump"]
-## Tiles that cast shadows; flat ground only receives them (saves the shadow passes).
-const SHADOW_TILES: Array[String] = ["bridge"]
-const NO_SHADOW_PROPS: Array[String] = ["mushrooms"]
-const CASTLE_PROPS: Array[String] = ["crates", "well", "fence", "lamppost"]
+## Small flat props that need not cast shadows. Tiles cast shadows only when listed in the theme's
+## shadow_tiles; flat ground only receives them (saves the shadow passes).
+const NO_SHADOW_PROPS: Array[String] = ["mushrooms", "glow_mushrooms", "bones"]
 const VORTEX_SHADER := preload("res://shaders/portal_vortex.gdshader")
 ## Safety limit for route enumeration on badly designed maps (road grids explode combinatorially).
 const MAX_ROUTES := 32
 
 var layout: PackedStringArray
 var size := Vector2i.ZERO
+var theme: MapTheme
 ## Enemy routes from the portal to the castle, shortest first.
 var routes: Array[Curve3D] = []
 var portal: Node3D
@@ -40,10 +39,12 @@ var _gate_column := -1
 var _portal_anim: AnimationPlayer
 var _castle_flags: WindFlags
 var _last_portal_fx := -100000
+var _landmark_bag: Array = []
 
 
 func build(level: LevelData) -> void:
 	layout = level.layout
+	theme = level.map_theme if level.map_theme else MapTheme.new()
 	size = Vector2i(layout[0].length(), layout.size())
 	var columns := _find("C").map(func(c: Vector2i) -> int: return c.x)
 	if not columns.is_empty():
@@ -55,6 +56,7 @@ func build(level: LevelData) -> void:
 			_place_tile(Vector2i(col, row), rng)
 	_place_portal()
 	_place_castle()
+	_place_cemetery()
 	_build_routes()
 	_place_decor(rng)
 	_flush_batches()
@@ -77,6 +79,10 @@ func is_river(cell: Vector2i) -> bool:
 
 func is_plot(cell: Vector2i) -> bool:
 	return char_at(cell) == "P"
+
+
+func is_cemetery(cell: Vector2i) -> bool:
+	return char_at(cell) == "G"
 
 
 ## A castle cell in the gate (middle) column: the only place a road may enter the castle.
@@ -141,8 +147,22 @@ func _place_tile(cell: Vector2i, rng: RandomNumberGenerator) -> void:
 			turns = 0
 		"C":
 			tile = "grass_1"
-	_batch("tile:" + tile, TileLibrary.tile(tile), tile in SHADOW_TILES,
+		"G":
+			if not theme.cemetery_tiles.is_empty():
+				tile = theme.cemetery_tiles[rng.randi() % theme.cemetery_tiles.size()]
+				turns = 0  # the graves face south
+	if not tile in theme.cemetery_tiles:
+		tile = _themed_tile(tile)
+	_batch("tile:" + tile, TileLibrary.tile(tile), tile in theme.shadow_tiles,
 			Transform3D(Basis(Vector3.UP, turns * PI / 2.0), cell_center(cell)))
+
+
+## The theme's version of a tile, or the plain one when the set has none.
+func _themed_tile(base: String) -> String:
+	var themed := theme.tile_prefix + base
+	if theme.tile_prefix.is_empty() or ResourceLoader.exists("res://models/tiles/%s.glb" % themed):
+		return themed
+	return base
 
 
 ## Indices of the DIRS where `connects` is true for the neighbour.
@@ -235,6 +255,39 @@ func _place_castle() -> void:
 	castle = _instance("res://models/structures/castle.glb", castle_center, _yaw_toward(toward))
 	_castle_flags = WindFlags.new(castle)
 	_play_idle(castle)
+
+
+# --- cemetery ----------------------------------------------------------------------------
+## A fence along every border edge of the cemetery ("G" cells) and a gate where a road enters it: on the
+## edge between a road cell walled in by graves on both sides and the next road cell outside.
+func _place_cemetery() -> void:
+	if theme.cemetery_fence.is_empty():
+		return
+	for cell in _find("G"):
+		for d in DIRS:
+			if not is_cemetery(cell + d):
+				_edge_prop(theme.cemetery_fence, cell, d, CELL / 2.0)
+	if theme.cemetery_gate.is_empty():
+		return
+	for cell in _find("#"):
+		for along in DIRS:
+			if _in_cemetery_lane(cell, along):
+				var next := cell + along
+				if is_road(next) and not _in_cemetery_lane(next, along):
+					_edge_prop(theme.cemetery_gate, cell, along, CELL / 2.0)
+
+
+## A road cell running along `along` with graves on both sides of it.
+func _in_cemetery_lane(cell: Vector2i, along: Vector2i) -> bool:
+	var side := Vector2i(along.y, along.x)
+	return is_road(cell) and is_cemetery(cell + side) and is_cemetery(cell - side)
+
+
+## A prop standing on the edge of `cell` toward `d`, its X axis along the edge.
+func _edge_prop(prop: String, cell: Vector2i, d: Vector2i, distance: float) -> void:
+	var at := cell_center(cell) + Vector3(d.x, 0, d.y) * distance
+	var yaw := 0.0 if d.y != 0 else PI / 2.0
+	_batch("prop:" + prop, TileLibrary.prop(prop), true, Transform3D(Basis(Vector3.UP, yaw), at))
 
 
 # --- routes ------------------------------------------------------------------------------
@@ -345,22 +398,45 @@ func _flush_batches() -> void:
 
 
 func _place_decor(rng: RandomNumberGenerator) -> void:
-	var castle_props := CASTLE_PROPS.duplicate()
+	var castle_props := Array(theme.castle_props)
+	var trees := theme.trees
+	var small := theme.small_props
 	for row in size.y:
 		for col in size.x:
 			var cell := Vector2i(col, row)
 			match char_at(cell):
 				"T":
 					for i in rng.randi_range(1, 3):
-						_prop(TREES[rng.randi() % TREES.size()], cell, rng)
+						_prop(trees[rng.randi() % trees.size()], cell, rng)
 				"r":
-					_prop(["rock_3", "rock_2"][rng.randi() % 2], cell, rng, 0.3)
-					_prop(SMALL_PROPS[rng.randi() % SMALL_PROPS.size()], cell, rng)
+					_prop(theme.rocks[rng.randi() % theme.rocks.size()], cell, rng, 0.3)
+					_prop(small[rng.randi() % small.size()], cell, rng)
+				"R":
+					_place_landmark(cell, rng)
 				".":
 					if _near_castle(cell) and not castle_props.is_empty() and rng.randf() < 0.6:
 						_prop(castle_props.pop_back(), cell, rng, 0.35)
 					elif _near_road(cell):
 						if rng.randf() < 0.12:
-							_prop("lamppost", cell, rng, 0.3)
+							_prop(theme.road_light, cell, rng, 0.3)
 					elif rng.randf() < 0.3:
-						_prop(SMALL_PROPS[rng.randi() % SMALL_PROPS.size()], cell, rng)
+						_prop(small[rng.randi() % small.size()], cell, rng)
+
+
+## One big piece per landmark cell ("R"): all of the theme's landmarks in random order before any repeats,
+## turned square to the grid.
+func _place_landmark(cell: Vector2i, rng: RandomNumberGenerator) -> void:
+	if theme.landmarks.is_empty():
+		_prop(theme.small_props[rng.randi() % theme.small_props.size()], cell, rng)
+		return
+	if _landmark_bag.is_empty():
+		_landmark_bag = Array(theme.landmarks)
+		for i in range(_landmark_bag.size() - 1, 0, -1):  # Fisher-Yates with the decor seed
+			var j := rng.randi_range(0, i)
+			var swap: Variant = _landmark_bag[i]
+			_landmark_bag[i] = _landmark_bag[j]
+			_landmark_bag[j] = swap
+	var prop: String = _landmark_bag.pop_back()
+	var offset := Vector3(rng.randf_range(-0.15, 0.15), 0, rng.randf_range(-0.15, 0.15))
+	_batch("prop:" + prop, TileLibrary.prop(prop), true,
+			Transform3D(Basis(Vector3.UP, (rng.randi() % 4) * PI / 2.0), cell_center(cell) + offset))

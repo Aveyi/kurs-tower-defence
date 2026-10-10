@@ -4,6 +4,8 @@
 //   fx_flash    0..1   - white flash (enemy hit)
 //   fx_frost    0..1   - icy crust and cold rim light (slowed by the ice tower)
 //   fx_stun     0..1   - greyed out with a pulsing violet rim (tower stunned by a golem's slam)
+//   fx_phase    0..1   - spectral cyan rim (ghosts idle at ~0.25); above 0.35 the body thins into drifting
+//                        mist (a ghost knight turned intangible)
 //   fx_reveal_y metres - everything above this world height is not built yet; a golden runic band
 //                        rises along the cut (tower construction / upgrade). 100000 = fully visible.
 #ifndef FX_INC
@@ -14,12 +16,14 @@ instance uniform float fx_dissolve = 0.0;
 instance uniform float fx_flash = 0.0;
 instance uniform float fx_frost = 0.0;
 instance uniform float fx_stun = 0.0;
+instance uniform float fx_phase = 0.0;
 instance uniform float fx_reveal_y = 100000.0;
 
 const vec3 FX_EMBER = vec3(1.0, 0.42, 0.1);
 const vec3 FX_REVEAL = vec3(1.0, 0.78, 0.32);
 const vec3 FX_FROST = vec3(0.55, 0.85, 1.0);
 const vec3 FX_STUN = vec3(0.7, 0.42, 1.0);
+const vec3 FX_PHASE = vec3(0.45, 0.95, 1.0);
 
 float fx_dissolve_value(vec3 local) {
 	return fbm(local * 3.2) - fx_dissolve * 1.08;
@@ -34,6 +38,10 @@ float fx_cut(vec3 local, vec3 world) {
 	if (world.y > fx_reveal_y) {
 		keep = -1.0;
 	}
+	if (fx_phase > 0.35) {
+		float wisps = value_noise(world * 5.0 + vec3(0.0, -TIME * 2.5, 0.0));
+		keep = min(keep, wisps - (fx_phase - 0.35) * 0.85);
+	}
 	return keep;
 }
 
@@ -44,6 +52,10 @@ void fx_apply(inout vec3 albedo, inout vec3 emission, vec3 normal, vec3 view, ve
 		float crystals = step(0.62, value_noise(local * 18.0));
 		albedo = mix(albedo, FX_FROST * (0.45 + luma + crystals * 0.3), fx_frost * 0.6);
 		emission += FX_FROST * (fresnel * 0.9 + crystals * 0.08) * fx_frost;
+	}
+	if (fx_phase > 0.0) {
+		albedo = mix(albedo, albedo * vec3(0.7, 0.9, 1.0) + vec3(0.04, 0.1, 0.12), fx_phase * 0.6);
+		emission += FX_PHASE * (fresnel * 1.8 + 0.1) * fx_phase;
 	}
 	if (fx_stun > 0.0) {
 		float luma = dot(albedo, vec3(0.3, 0.59, 0.11));

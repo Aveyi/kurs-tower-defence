@@ -20,6 +20,9 @@ const ABILITY_RETRY := 0.5
 ## Time into the "Cast" animation when the fists hit the ground (frame 20 at 24 fps).
 const SLAM_HIT_TIME := 0.833
 const SLAM_COLOR := Color(0.7, 0.42, 1.0)
+## fx_phase of a ghost: a faint spectral rim while solid, mist while intangible (see fx.gdshaderinc).
+const GHOST_IDLE := 0.25
+const GHOST_PHASED := 1.0
 ## Allies above this share of their max HP are not worth a heal.
 const HEAL_BELOW := 0.95
 ## Bosses get only this part of a heal, so a witch cannot keep a boss alive on her own.
@@ -38,6 +41,8 @@ var alive := true
 var lane := 0.0
 ## Index of the map route this enemy follows.
 var route := 0
+## A ghost that turned intangible: shots pass through it and it takes no damage or slow.
+var intangible := false
 
 var _curve: Curve3D
 var _length := 0.0
@@ -54,6 +59,8 @@ var _hit_cooldown := 0.0
 var _summon_left := 0.0
 var _heal_left := 0.0
 var _slam_left := 0.0
+var _phase_left := 0.0
+var _phase_tween: Tween
 var _cast_left := 0.0
 var _cast_effect_at := 0.0
 var _cast_kind := Cast.SUMMON
@@ -70,6 +77,7 @@ func setup(enemy_data: EnemyData, path: Curve3D, hp_multiplier: float, start := 
 	_summon_left = data.summon_interval
 	_heal_left = data.heal_interval * 0.5
 	_slam_left = data.slam_interval * 0.6
+	_phase_left = data.phase_interval * 0.5
 
 
 func _ready() -> void:
@@ -85,6 +93,8 @@ func _ready() -> void:
 	_anim.play(_move_anim)
 	_anim.seek(randf() * move.length, true)
 	_bar = _make_health_bar()
+	if data.phase_duration > 0.0:
+		FantasyMaterials.set_fx(_model, &"fx_phase", GHOST_IDLE)
 	_update_transform()
 
 
@@ -98,6 +108,8 @@ func _physics_process(delta: float) -> void:
 			_slow = 1.0
 			_anim.speed_scale = data.anim_speed
 			_set_frost(0.0)
+	if data.phase_duration > 0.0:
+		_update_phase(delta)
 	if _cast_left > 0.0:
 		_update_cast(delta)
 		return
@@ -155,7 +167,7 @@ func aim_point() -> Vector3:
 
 
 func take_damage(amount: float) -> void:
-	if not alive:
+	if not alive or intangible:
 		return
 	hp -= amount
 	_bar.visible = true
@@ -180,7 +192,7 @@ func heal(amount: float) -> void:
 
 
 func apply_slow(factor: float, duration: float) -> void:
-	if not alive:
+	if not alive or intangible:
 		return
 	_slow = minf(_slow, factor) if _slow_left > 0.0 else factor
 	_slow_left = maxf(_slow_left, duration)
@@ -225,6 +237,24 @@ func _die() -> void:
 	tween.tween_interval(_anim.get_animation(&"Die").length + 0.2)
 	FantasyMaterials.tween_fx(tween, _model, &"fx_dissolve", 0.0, 1.0, 1.6 if data.is_boss else 1.1)
 	tween.tween_callback(queue_free)
+
+
+## Ghosts flicker between solid and intangible (the walk goes on).
+func _update_phase(delta: float) -> void:
+	_phase_left -= delta
+	if _phase_left > 0.0:
+		return
+	intangible = not intangible
+	_phase_left = data.phase_duration if intangible else data.phase_interval
+	if _phase_tween:
+		_phase_tween.kill()
+	_phase_tween = create_tween()
+	var from := GHOST_IDLE if intangible else GHOST_PHASED
+	FantasyMaterials.tween_fx(_phase_tween, _model, &"fx_phase", from, GHOST_PHASED + GHOST_IDLE - from,
+			0.15 if intangible else 0.3)
+	if intangible:
+		Audio.play(&"phase", -4.0, 0.2)
+		Effects.burst(get_parent(), &"phase", global_position + Vector3.UP * data.aim_height)
 
 
 ## Stops to cast: summon minions, heal wounded allies or slam the ground to stun towers.

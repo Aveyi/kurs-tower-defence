@@ -9,6 +9,7 @@ import math
 from mathutils import Vector
 
 from haunted import Frame
+from towers import polar
 from lowpoly import SIDES, Anim, Model, biped_die, biped_hit, biped_rig, biped_walk, rag
 from mobs import _along, _dir, _grip, _mirror
 
@@ -614,4 +615,169 @@ def golem():
     return m
 
 
-MOBS = dict(skeleton=skeleton, zombie=zombie, witch=witch, gargoyle=gargoyle, golem=golem)
+# ------------------------------------------------------------------------------------
+def ghost_knight():
+    """Boss: spectral knight (~2.4 m) hovering on ragged wisps instead of legs: great helm with glowing eyes,
+    spectral greatsword, a soul lantern on a chain, broken shackles, tattered cape and plume. In the game it
+    regularly turns intangible (fx_phase) and shots pass through it."""
+    m = Model("GhostKnight", dict(
+        armor="#5E7A84", armor2="#455C66", edge="#9DB8C0", cloth="#24343C", cloth2="#1A262C", wisp="#6F949A",
+        wisp2="#4F7076", leather="#2E3A3E", blade="#B8D4DA", blade2="#88A6AE", iron="#3F4A50", dark="#0E1418",
+        soul="#7FF7FF"),
+        glow_color="#7FF7FF", glow_strength=4.5, metal=("armor", "armor2", "edge", "blade", "blade2", "iron"), seed=106)
+    arm_dir = dict(L=_dir(0.1, -0.75, -0.65), R=_dir(-0.05, -0.82, -0.57))
+    wrists = {side: Vector((s * 0.5, -0.02, 1.45)) + arm_dir[side] * 0.33 for s, side in SIDES}
+    m.bone("root", (0, 0, 0))
+    m.bone("hover", (0, 0, 0.9), "root")
+    m.bone("hips", (0, 0, 1.1), "hover")
+    m.bone("wisp", (0, 0, 1.05), "hips")
+    m.bone("wisp2", (0, 0.04, 0.6), "wisp")
+    m.bone("chest", (0, 0, 1.3), "hips")
+    m.bone("neck", (0, -0.02, 1.95), "chest")
+    m.bone("head", (0, -0.03, 2.03), "neck")
+    m.bone("cape", (0, 0.22, 1.95), "chest")
+    m.bone("cape2", (0, 0.29, 1.25), "cape")
+    for s, side in SIDES:
+        m.bone(f"upperarm_{side}", (s * 0.42, 0, 1.88), "chest")
+        m.bone(f"forearm_{side}", (s * 0.5, -0.02, 1.45), f"upperarm_{side}")
+        m.bone(f"hand_{side}", tuple(wrists[side]), f"forearm_{side}")
+    lantern_top = wrists["L"] + arm_dir["L"] * 0.06 + Vector((0, 0, -0.05))
+    m.bone("lantern", tuple(lantern_top), "hand_L")
+
+    # lower body: a ragged spectral robe streaming into wisps
+    m.cyl("wisp", "cloth", (0, 0.02, 0.86), r=0.2, r2=0.35, h=0.52, n=10, jitter=0.01)
+    m.cyl("wisp", "cloth2", (0, 0.03, 0.62), r=0.17, r2=0.2, h=0.06, n=10)
+    for k in range(8):
+        deg = k * 45 + 10
+        top = Vector(polar(0.17, deg, 0.62, (0, 0.03)))
+        bottom = Vector(polar(0.06, deg + 25, 0.12 + 0.12 * (k % 3), (0, 0.12)))
+        mid = top.lerp(bottom, 0.5) + Vector((0, 0.04, 0))
+        col = ("wisp", "wisp2", "cloth")[k % 3]
+        m.seg("wisp2", col, top, mid, 0.075, 0.05, n=5)
+        m.seg("wisp2", col, mid, bottom, 0.05, 0.0, n=5)
+    for deg in (60, 200, 320):  # faint glowing threads inside the wisps
+        m.seg("wisp2", "soul", polar(0.1, deg, 0.6, (0, 0.03)), polar(0.05, deg + 30, 0.25, (0, 0.1)), 0.008, 0.0,
+              n=3, glow=True)
+
+    # faulds and tabard
+    m.cyl("hips", "armor", (0, 0, 1.13), r=0.36, r2=0.3, h=0.24, n=10)
+    m.cyl("hips", "edge", (0, 0, 1.02), r=0.365, r2=0.36, h=0.025, n=10)
+    m.slab("hips", "cloth2", [(x, -0.37 - 0.05 * (1.2 - z), z) for x, z in rag(-0.12, 0.12, 1.2, 0.72, teeth=3,
+                                                                                    depth=0.06)], 0.02)
+
+    # breastplate with a cracked glowing soul in the middle
+    m.box("chest", "armor", (0, 0, 1.62), (0.6, 0.38, 0.5), taper=1.2, bevel=0.03)
+    m.box("chest", "edge", (0, -0.205, 1.64), (0.05, 0.035, 0.46), taper=1.1, bevel=0.008)
+    m.box("chest", "armor2", (0, 0, 1.36), (0.58, 0.36, 0.06), bevel=0.01)
+    m.cyl("chest", "armor", (0, -0.01, 1.92), r=0.2, r2=0.15, h=0.1, n=10)
+    m.ring("chest", "edge", (0, -0.225, 1.68), 0.07, 0.016, n=10, rot=(90, 0, 0))
+    m.ball("chest", "soul", (0, -0.23, 1.68), (0.09, 0.035, 0.09), glow=True)
+    for (x0, z0), (x1, z1) in (((0.05, 1.71), (0.13, 1.8)), ((-0.04, 1.64), (-0.12, 1.55)), ((0.06, 1.64), (0.1, 1.52))):
+        m.seg("chest", "soul", (x0, -0.222, z0), (x1, -0.215, z1), 0.008, n=3, glow=True)
+
+    for s, side in SIDES:
+        P = _mirror(s)
+        ua, fa, hand = f"upperarm_{side}", f"forearm_{side}", f"hand_{side}"
+        # rounded pauldron with two lames
+        m.ball(ua, "armor", P(0.44, 0, 1.93), (0.32, 0.36, 0.24), rot=(0, -s * 20, 0))
+        for k, dz in enumerate((-0.08, -0.15)):
+            m.box(ua, ("armor2", "armor")[k], P(0.47 + 0.02 * k, 0, 1.92 + dz), (0.24 - 0.03 * k, 0.3, 0.06),
+                  rot=(0, -s * (30 + 8 * k), 0), bevel=0.012)
+        m.seg(ua, "armor2", P(0.42, 0, 1.86), P(0.5, -0.02, 1.48), 0.06, 0.055, n=7)
+        elbow, d, wrist = Vector(P(0.5, -0.02, 1.45)), arm_dir[side], wrists[side]
+        m.ball(fa, "armor", elbow, 0.12)
+        m.seg(fa, "armor", elbow + d * 0.03, wrist, 0.065, 0.075, n=8)
+        m.ring(fa, "iron", wrist - d * 0.05, 0.085, 0.018, n=10, rot=_along(d))  # shackle
+        gauntlet = wrist + d * 0.06
+        m.box(hand, "armor2", gauntlet, (0.12, 0.13, 0.12), rot=_along(d), bevel=0.02)
+        # a few broken chain links hanging from the shackle
+        link = wrist - d * 0.05 + Vector((s * 0.02, 0.0, -0.09))
+        for k in range(3):
+            m.ring(fa, "iron", link + Vector((0, 0, -0.065 * k)), 0.028, 0.008, n=8,
+                   rot=(0, 90 if k % 2 else 0, s * 20))
+
+    # great helm with a T-visor, glowing eyes and a tattered plume
+    m.cyl("head", "armor", (0, -0.03, 2.14), r=0.165, r2=0.15, h=0.3, n=10)
+    m.ball("head", "armor", (0, -0.03, 2.3), (0.3, 0.3, 0.12))
+    m.box("head", "dark", (0, -0.18, 2.17), (0.2, 0.04, 0.035))
+    m.box("head", "dark", (0, -0.18, 2.1), (0.035, 0.04, 0.12))
+    for s in (1, -1):
+        m.ball("head", "soul", (s * 0.055, -0.2, 2.17), (0.05, 0.025, 0.028), glow=True)
+        for z in (2.04, 2.0):
+            m.box("head", "dark", (s * 0.07, -0.172, z), (0.012, 0.03, 0.012))
+    m.cyl("head", "edge", (0, -0.03, 2.25), r=0.172, h=0.03, n=10)
+    m.box("head", "edge", (0, -0.19, 2.12), (0.03, 0.02, 0.2))  # nasal ridge
+    m.slab("head", "cloth", [(0, -0.05, 2.35), (0, 0.08, 2.44), (0, 0.3, 2.32), (0, 0.42, 2.12), (0, 0.33, 2.15),
+                             (0, 0.37, 2.0), (0, 0.22, 2.18), (0, 0.1, 2.3)], 0.04)
+
+    # cape in two parts so it can sway
+    m.slab("cape", "cloth", [(-0.34, 0.22, 1.97), (0.34, 0.22, 1.97), (0.42, 0.29, 1.27), (-0.42, 0.29, 1.27)], 0.03)
+    m.slab("cape2", "cloth2", [(x, 0.29 + (1.29 - z) / 0.9 * 0.12, z)
+                               for x, z in rag(-0.42, 0.42, 1.29, 0.42, teeth=5, depth=0.14)], 0.03)
+
+    # spectral greatsword: grip through the right gauntlet, a glowing rune channel along the blade
+    hilt = wrists["R"] + arm_dir["R"] * 0.06
+    c = (_grip(arm_dir["R"]) * 0.866 + arm_dir["R"] * 0.5).normalized()
+    X = (Vector((0, 0, 1)) - c * c.z).normalized()
+
+    def at(t):
+        return hilt + c * t
+
+    blade = [(0.12, 0.06), (0.95, 0.05), (1.1, 0.0)]
+    m.slab("hand_R", "blade", [at(t) + X * w for t, w in blade] + [at(t) - X * w for t, w in reversed(blade[:-1])],
+           0.028)
+    m.slab("hand_R", "soul", [at(0.18) + X * 0.012, at(0.88) + X * 0.008, at(0.88) - X * 0.008, at(0.18) - X * 0.012],
+           0.034, glow=True)
+    m.seg("hand_R", "edge", at(0.1) - X * 0.17, at(0.1) + X * 0.17, 0.028, n=6)
+    for sx in (1, -1):
+        m.seg("hand_R", "edge", at(0.1) + X * sx * 0.16, at(0.05) + X * sx * 0.23, 0.024, 0.0, n=4)
+    m.seg("hand_R", "leather", at(-0.18), at(0.08), 0.024, n=6)
+    m.ball("hand_R", "soul", at(-0.21), 0.05, glow=True)
+
+    # soul lantern hanging on a short chain from the left gauntlet
+    for k in range(2):
+        m.ring("lantern", "iron", lantern_top + Vector((0, 0, -0.03 - 0.06 * k)), 0.025, 0.007, n=8,
+               rot=(0, 90 if k % 2 else 0, 0))
+    lz = lantern_top + Vector((0, 0, -0.38))
+    m.cyl("lantern", "iron", lz + Vector((0, 0, 0.22)), r=0.11, r2=0.02, h=0.1, n=6)
+    m.cyl("lantern", "iron", lz + Vector((0, 0, 0.16)), r=0.1, h=0.025, n=6)
+    m.cyl("lantern", "iron", lz, r=0.09, r2=0.1, h=0.03, n=6)
+    for k in range(6):
+        a = math.radians(k * 60)
+        p = lz + Vector((math.cos(a) * 0.088, math.sin(a) * 0.088, 0))
+        m.seg("lantern", "iron", p, p + Vector((0, 0, 0.16)), 0.008, n=3)
+    m.ball("lantern", "soul", lz + Vector((0, 0, 0.08)), (0.1, 0.1, 0.14), glow=True)
+    m.build()
+
+    a = Anim(m, "Walk", loop=True)
+    for f in (0, 10, 20, 30, 40):
+        ph = math.sin(f / 40 * 2 * math.pi)
+        ph2 = math.cos(f / 40 * 2 * math.pi)
+        a.pose(f, hover=dict(loc=(0, 0, 0.06 * ph)), hips=dict(yaw=3 * ph2), chest=dict(pitch=4, yaw=-4 * ph2),
+               head=dict(pitch=-3 + 2 * ph), wisp=dict(pitch=-6 - 4 * ph2, side=4 * ph),
+               wisp2=dict(pitch=-10 - 6 * ph2, side=-6 * ph), cape=dict(pitch=-6 - 3 * ph2),
+               cape2=dict(pitch=-8 - 5 * ph2, side=3 * ph), upperarm_L=dict(pitch=-4 * ph2), upperarm_R=dict(pitch=2 * ph2),
+               forearm_R=dict(pitch=-3 * ph), lantern=dict(pitch=12 * ph2, side=6 * ph))
+    a.done()
+
+    a = Anim(m, "Hit")
+    a.pose(0)
+    a.pose(3, hover=dict(loc=(0, 0.06, 0.02)), chest=dict(pitch=-12), head=dict(pitch=-10),
+           upperarm_L=dict(pitch=-20, side=-10), upperarm_R=dict(pitch=-15, side=10), lantern=dict(pitch=-25),
+           cape=dict(pitch=-12), cape2=dict(pitch=-10), wisp2=dict(pitch=-15))
+    a.pose(10)
+    a.done()
+
+    a = Anim(m, "Die")  # the knight wails, then sinks into the ground, bowing forward
+    a.pose(0)
+    a.pose(10, hover=dict(loc=(0, 0, 0.12)), chest=dict(pitch=-22), head=dict(pitch=-30),
+           upperarm_L=dict(pitch=-60, side=-35), upperarm_R=dict(pitch=-50, side=35), lantern=dict(pitch=-30),
+           cape=dict(pitch=-20), wisp=dict(scale=1.1))
+    a.pose(40, hover=dict(loc=(0, 0, -0.75)), chest=dict(pitch=35), head=dict(pitch=25), hips=dict(pitch=10),
+           upperarm_L=dict(pitch=-20, side=-20), upperarm_R=dict(pitch=-30, side=25), lantern=dict(pitch=40),
+           cape=dict(pitch=10), cape2=dict(pitch=15), wisp=dict(scale=0.5), wisp2=dict(scale=0.4))
+    a.done()
+    return m
+
+
+MOBS = dict(skeleton=skeleton, zombie=zombie, witch=witch, gargoyle=gargoyle, golem=golem, ghost_knight=ghost_knight)

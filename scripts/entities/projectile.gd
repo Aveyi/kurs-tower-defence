@@ -11,6 +11,9 @@ var _time := 0.0
 var _flight := 1.0
 var _arc := 0.0
 var _trail: GPUParticles3D
+## Seconds left of flying on after passing through an intangible ghost (< 0: not passing).
+var _pass_left := -1.0
+var _pass_dir := Vector3.ZERO
 
 
 func setup(tower: TowerData, stats: TowerLevel, target: Enemy, from: Vector3) -> void:
@@ -36,6 +39,9 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _pass_left >= 0.0:
+		_fly_on(delta)
+		return
 	if _tower.ballistic:
 		_time += delta
 		var t := minf(_time / _flight, 1.0)
@@ -50,10 +56,30 @@ func _physics_process(delta: float) -> void:
 	var to := _point - global_position
 	var step := _tower.projectile_speed * delta
 	if to.length() <= step:
-		_impact(_point)
+		if is_instance_valid(_target) and _target.intangible:
+			_pass_through(to)
+		else:
+			_impact(_point)
 		return
 	_face(to)
 	global_position += to.normalized() * step
+
+
+## The shot reached a ghost that is intangible: it flies on through it and fades away.
+func _pass_through(direction: Vector3) -> void:
+	# keep the course the shot was flying on (its model front, +Z, faces the way it flies)
+	_pass_dir = global_basis.z.normalized() if direction.length_squared() < 0.01 else direction.normalized()
+	_pass_left = 0.35
+	Effects.burst(get_parent(), &"phase_pass", global_position, 0.8)
+
+
+func _fly_on(delta: float) -> void:
+	_pass_left -= delta
+	global_position += _pass_dir * _tower.projectile_speed * delta
+	scale = Vector3.ONE * clampf(_pass_left / 0.35, 0.05, 1.0)
+	if _pass_left <= 0.0:
+		Effects.release_trail(_trail, get_parent())
+		queue_free()
 
 
 func _face(direction: Vector3) -> void:

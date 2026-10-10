@@ -495,11 +495,13 @@ def _iron_bars(m, F, x0, x1, z0, z1, step=0.16, skip=(), bent=()):
 
 
 def cemetery_fence():
+    """One 2 m fence segment for a cell edge: its posts sit exactly on the cell corners, so neighbouring
+    segments share their posts and the corners of the cemetery meet in a single post."""
     m = _model("CemeteryFence", seed=2300)
-    for x in (-0.9, 0.9):
+    for x in (-1.0, 1.0):
         _stone_post(m, x, 0)
-    m.box("root", "stone2", (0, 0, 0.04), (1.7, 0.16, 0.08), bevel=0.015, jitter=0.006)
-    _iron_bars(m, Frame(), -0.72, 0.72, 0.08, 0.85, skip=(6,), bent=(3,))
+    m.box("root", "stone2", (0, 0, 0.04), (1.82, 0.16, 0.08), bevel=0.015, jitter=0.006)
+    _iron_bars(m, Frame(), -0.8, 0.8, 0.08, 0.85, step=0.178, skip=(6,), bent=(3,))
     m.seg("root", "hang", (0.24, -0.02, 0.8), (0.26, -0.03, 0.35), 0.02, 0.004, n=3)
     _moss(m, (-0.4, 0, 0.08), (0.3, 0.17, 0.05))
     _tufts(m, ((0.5, -0.15), (-0.7, 0.15)))

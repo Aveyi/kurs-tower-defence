@@ -15,7 +15,8 @@ var _updating := false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	theme = THEME
+	if theme == null:  # the in-game HUD passes its own (level-specific) theme
+		theme = THEME
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.55)

@@ -70,7 +70,7 @@ ITEMS = dict(
     goblin=(mobs.goblin, "Walk"), orc=(mobs.orc, "Walk"), troll=(mobs.troll, "Walk"), wyvern=(mobs.wyvern, "Fly"),
     necromancer=(mobs.necromancer, "Walk"), skeleton_knight=(mobs.skeleton_knight, "Walk"),
     skeleton=(undead.skeleton, "Walk"), zombie=(undead.zombie, "Walk"), witch=(undead.witch, "Walk"),
-    gargoyle=(undead.gargoyle, "Fly"), golem=(undead.golem, "Walk"),
+    gargoyle=(undead.gargoyle, "Fly"), golem=(undead.golem, "Walk"), ghost_knight=(undead.ghost_knight, "Walk"),
     coin=(coin, None), heart=(heart, None), wave=(swords, None),
 )
 

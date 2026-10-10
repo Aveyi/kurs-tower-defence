@@ -205,6 +205,17 @@ def slam():
     return s.reverb(s.mix((boom, 1.0), (rumble, 0.6), (clacks, 0.35)), rt60=1.4, wet=0.25)
 
 
+def phase():
+    """Ghost knight turning intangible: a reversed shimmer, a falling wavering spectral tone and a breath."""
+    d = 0.9
+    glide = s.sweep(1250, 520, d) * (1 + 0.012 * np.sin(2 * np.pi * 7 * s.time(d)))
+    tone = sum(np.sin(s.phase(glide * r, s.samples(d))) for r in (1.0, 1.007, 1.5)) / 3
+    tone *= s.env_points(d, [(0, 0), (0.08, 1), (0.5, 0.6), (d, 0)])
+    air = s.whoosh(d, 2500, 700) * s.env_points(d, [(0, 0), (0.15, 1), (d, 0)])
+    shimmer = (s.bell(1568, 0.5, 0.6) + s.bell(2093, 0.5, 0.5))[::-1].copy()
+    return s.reverb(s.mix((shimmer, 0.25), (tone, 0.6, 0.35), (air, 0.35, 0.3)), rt60=1.6, wet=0.4)
+
+
 SFX = dict(  # name: (recipe, peak)
     arrow_hit=(arrow_hit, 0.35), cannon_shoot=(cannon_shoot, 0.8), explosion=(explosion, 0.85),
     magic_shoot=(magic_shoot, 0.22), magic_hit=(magic_hit, 0.25),
@@ -213,7 +224,7 @@ SFX = dict(  # name: (recipe, peak)
     upgrade=(upgrade, 0.6), sell=(sell, 0.55), error=(error, 0.4), ui_click=(ui_click, 0.35),
     ui_hover=(ui_hover, 0.12), castle_hit=(castle_hit, 0.9), wave_horn=(wave_horn, 0.75),
     wave_clear=(wave_clear, 0.6), victory=(victory, 0.85), defeat=(defeat, 0.85),
-    portal_spawn=(portal_spawn, 0.35), summon=(summon, 0.7), heal=(heal, 0.4), slam=(slam, 0.9),
+    portal_spawn=(portal_spawn, 0.35), summon=(summon, 0.7), heal=(heal, 0.4), slam=(slam, 0.9), phase=(phase, 0.45),
 )
 
 
