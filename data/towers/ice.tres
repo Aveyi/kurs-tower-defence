@@ -51,3 +51,7 @@ projectile_speed = 16.0
 ballistic = false
 impact_color = Color(0.6, 0.95, 1.0, 1)
 levels = Array[ExtResource("2_level")]([SubResource("Resource_level1"), SubResource("Resource_level2"), SubResource("Resource_level3")])
+shoot_sound = &"ice_shoot"
+impact_sound = &"ice_hit"
+impact_effect = &"frost"
+trail_effect = &"trail_frost"

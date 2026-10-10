@@ -18,6 +18,7 @@ const RIVER_TILES := {"river_straight": [0, 2], "river_corner": [2, 1]}
 const TREES: Array[String] = ["pine_1", "pine_2", "oak_1", "pine_1", "pine_2", "oak_2"]
 const SMALL_PROPS: Array[String] = ["bush_1", "bush_2", "rock_1", "rock_2", "mushrooms", "stump"]
 const CASTLE_PROPS: Array[String] = ["crates", "well", "fence", "lamppost"]
+const VORTEX_SHADER := preload("res://shaders/portal_vortex.gdshader")
 
 var layout: PackedStringArray
 var size := Vector2i.ZERO
@@ -28,6 +29,8 @@ var castle_center := Vector3.ZERO
 
 var _grid: GridMap
 var _portal_anim: AnimationPlayer
+var _castle_flags: WindFlags
+var _last_portal_fx := -100000
 
 
 func build(level: LevelData) -> void:
@@ -80,10 +83,21 @@ func bounds() -> Rect2:
 	return Rect2(0, 0, size.x * CELL, size.y * CELL)
 
 
+func _process(_delta: float) -> void:
+	if _castle_flags:
+		_castle_flags.update()
+
+
 func play_portal_spawn() -> void:
+	var now := Time.get_ticks_msec()
+	if now - _last_portal_fx < 700:
+		return
+	_last_portal_fx = now
 	if _portal_anim:
 		_portal_anim.play(&"Spawn")
 		_portal_anim.queue(&"Idle")
+	Effects.burst(self, &"portal", portal.global_position + Vector3.UP * 1.25)
+	Audio.play(&"portal_spawn", -6.0, 0.7)
 
 
 # --- tiles ---------------------------------------------------------------------------------
@@ -158,6 +172,7 @@ func _instance(path: String, at: Vector3, yaw := 0.0, scale_factor := 1.0) -> No
 	node.position = at
 	node.rotation.y = yaw
 	node.scale = Vector3.ONE * scale_factor
+	FantasyMaterials.apply(node)
 	return node
 
 
@@ -176,6 +191,18 @@ func _place_portal() -> void:
 			toward = Vector3(d.x, 0, d.y)
 	portal = _instance("res://models/structures/portal.glb", cell_center(start), _yaw_toward(toward))
 	_portal_anim = _play_idle(portal)
+	var material := ShaderMaterial.new()
+	material.shader = VORTEX_SHADER
+	for side in [1.0, -1.0]:  # a quad on each face of the arch's dark disc
+		var vortex := MeshInstance3D.new()
+		var quad := QuadMesh.new()
+		quad.size = Vector2(1.62, 1.62)
+		vortex.mesh = quad
+		vortex.material_override = material
+		vortex.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		vortex.position = Vector3(0.0, 1.25, 0.03 * side)
+		vortex.rotation.y = 0.0 if side > 0.0 else PI
+		portal.add_child(vortex)
 
 
 func _place_castle() -> void:
@@ -189,6 +216,7 @@ func _place_castle() -> void:
 			if is_road(c + d):
 				toward = Vector3(d.x, 0, d.y)
 	castle = _instance("res://models/structures/castle.glb", castle_center, _yaw_toward(toward))
+	_castle_flags = WindFlags.new(castle)
 	_play_idle(castle)
 
 

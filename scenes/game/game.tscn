@@ -13,22 +13,34 @@
 [ext_resource type="Resource" path="res://data/towers/mage.tres" id="11_mage"]
 [ext_resource type="Resource" path="res://data/towers/ice.tres" id="12_ice"]
 [ext_resource type="Resource" path="res://data/towers/ballista.tres" id="13_ballista"]
+[ext_resource type="Shader" path="res://shaders/sky.gdshader" id="14_sky"]
+[ext_resource type="Shader" path="res://shaders/outline.gdshader" id="15_outline"]
+[ext_resource type="Shader" path="res://shaders/color_grade.gdshader" id="16_grade"]
 
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
-sky_top_color = Color(0.3, 0.5, 0.82, 1)
-sky_horizon_color = Color(0.72, 0.8, 0.9, 1)
-ground_bottom_color = Color(0.22, 0.26, 0.22, 1)
-ground_horizon_color = Color(0.72, 0.8, 0.9, 1)
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_sky"]
+shader = ExtResource("14_sky")
 
 [sub_resource type="Sky" id="Sky_main"]
-sky_material = SubResource("ProceduralSkyMaterial_sky")
+sky_material = SubResource("ShaderMaterial_sky")
+process_mode = 2
+radiance_size = 1
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_outline"]
+render_priority = 100
+shader = ExtResource("15_outline")
+
+[sub_resource type="QuadMesh" id="QuadMesh_screen"]
+size = Vector2(2, 2)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_grade"]
+shader = ExtResource("16_grade")
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 2
 sky = SubResource("Sky_main")
 ambient_light_source = 3
-ambient_light_sky_contribution = 0.75
-ambient_light_energy = 0.9
+ambient_light_sky_contribution = 0.6
+ambient_light_energy = 0.55
 tonemap_mode = 2
 ssao_enabled = true
 ssao_radius = 1.2
@@ -47,7 +59,8 @@ environment = SubResource("Environment_main")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 rotation = Vector3(-0.85, -0.6, 0)
-light_energy = 1.25
+light_color = Color(1, 0.96, 0.88, 1)
+light_energy = 1.15
 shadow_enabled = true
 directional_shadow_max_distance = 70.0
 
@@ -71,6 +84,25 @@ script = ExtResource("4_camera")
 current = true
 fov = 45.0
 far = 300.0
+
+[node name="Outline" type="MeshInstance3D" parent="CameraRig/Camera3D"]
+cast_shadow = 0
+extra_cull_margin = 16384.0
+mesh = SubResource("QuadMesh_screen")
+surface_material_override/0 = SubResource("ShaderMaterial_outline")
+
+[node name="PostProcess" type="CanvasLayer" parent="."]
+layer = 0
+
+[node name="ColorGrade" type="ColorRect" parent="PostProcess"]
+material = SubResource("ShaderMaterial_grade")
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 
 [node name="BuildController" type="Node3D" parent="."]
 script = ExtResource("5_build")

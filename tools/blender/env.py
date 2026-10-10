@@ -85,11 +85,12 @@ def terrain_tile(name, road=None, river=None, bridge=False, plot=False, tufts=0,
         if on_river(x, y):
             if z < -0.28:
                 return rng.choice(("bed", "bed2"))
-            return "sand" if z < -0.1 else "mud" if river_d(x, y) < 0.75 else "grass2"
+            return "sand" if z < -0.1 else "mud" if river_d(x, y) < 0.75 else "grass"
         if on_road(x, y, -0.01):
             return rng.choice(("road", "road", "road2", "road3"))
-        n = math.sin(x * 2.1 + seed) * math.cos(y * 1.7 - seed * 0.5) + rng.uniform(-0.4, 0.4)
-        return "grass3" if n > 0.55 else "grass2" if n < -0.45 else "grass"
+        # one grass colour: hue patches are added in world space by shaders/ground.gdshader,
+        # so the pattern runs across tile borders instead of repeating per tile
+        return "grass"
 
     # top surface: N x N grid, interior grass vertices jittered, edges exact so tiles connect
     N, step = 16, 2.0 / 16

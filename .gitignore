@@ -9,3 +9,7 @@ export_presets.cfg
 
 # macOS
 .DS_Store
+
+# Python
+__pycache__/
+*.pyc

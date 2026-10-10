@@ -44,3 +44,7 @@ projectile_speed = 13.0
 ballistic = false
 impact_color = Color(0.75, 0.5, 1.0, 1)
 levels = Array[ExtResource("2_level")]([SubResource("Resource_level1"), SubResource("Resource_level2"), SubResource("Resource_level3")])
+shoot_sound = &"magic_shoot"
+impact_sound = &"magic_hit"
+impact_effect = &"magic"
+trail_effect = &"trail_magic"

@@ -24,6 +24,7 @@ static func get_library() -> MeshLibrary:
 			node = node.get_parent()
 		_library.create_item(i)
 		_library.set_item_name(i, TILES[i])
+		FantasyMaterials.apply_to_mesh(mesh_instance.mesh, true)
 		_library.set_item_mesh(i, mesh_instance.mesh)
 		_library.set_item_mesh_transform(i, xform)
 		scene.free()

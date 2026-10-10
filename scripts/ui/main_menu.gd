@@ -8,3 +8,5 @@ func _ready() -> void:
 	%PlayButton.pressed.connect(func() -> void: get_tree().change_scene_to_file("res://scenes/game/game.tscn"))
 	%QuitButton.pressed.connect(func() -> void: get_tree().quit())
 	%PlayButton.grab_focus()
+	Audio.play_music(&"menu")
+	Audio.wire_buttons(self)

@@ -42,6 +42,7 @@ func start_next_wave() -> void:
 		for i in group.count:
 			_queue.append([group.delay + i * group.interval, group.enemy])
 	_queue.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
+	Audio.play(&"wave_horn")
 	wave_started.emit(wave_index)
 
 

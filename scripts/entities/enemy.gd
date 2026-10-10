@@ -27,6 +27,10 @@ var _length := 0.0
 var _anim: AnimationPlayer
 var _move_anim := &"Walk"
 var _bar: MeshInstance3D
+var _model: Node3D
+var _flash_tween: Tween
+var _frost_tween: Tween
+var _frost := 0.0
 var _slow := 1.0
 var _slow_left := 0.0
 var _hit_cooldown := 0.0
@@ -47,9 +51,10 @@ func setup(enemy_data: EnemyData, path: Curve3D, hp_multiplier: float, start := 
 
 func _ready() -> void:
 	add_to_group(&"enemies")
-	var model := data.model.instantiate()
-	add_child(model)
-	_anim = model.find_child("AnimationPlayer", true, false)
+	_model = data.model.instantiate()
+	add_child(_model)
+	FantasyMaterials.apply(_model)
+	_anim = _model.find_child("AnimationPlayer", true, false)
 	_move_anim = &"Fly" if _anim.has_animation(&"Fly") else &"Walk"
 	var move := _anim.get_animation(_move_anim)
 	move.loop_mode = Animation.LOOP_LINEAR
@@ -69,6 +74,7 @@ func _physics_process(delta: float) -> void:
 		if _slow_left <= 0.0:
 			_slow = 1.0
 			_anim.speed_scale = data.anim_speed
+			_set_frost(0.0)
 	if _cast_left > 0.0:
 		_update_cast(delta)
 		return
@@ -112,6 +118,7 @@ func take_damage(amount: float) -> void:
 	hp -= amount
 	_bar.visible = true
 	_bar.set_instance_shader_parameter(&"ratio", clampf(hp / max_hp, 0.0, 1.0))
+	_flash()
 	if hp <= 0.0:
 		_die()
 	elif not data.is_boss and _hit_cooldown <= 0.0 and _cast_left <= 0.0:
@@ -126,6 +133,22 @@ func apply_slow(factor: float, duration: float) -> void:
 	_slow = minf(_slow, factor) if _slow_left > 0.0 else factor
 	_slow_left = maxf(_slow_left, duration)
 	_anim.speed_scale = data.anim_speed * _slow
+	_set_frost(1.0)
+
+
+func _flash() -> void:
+	if _flash_tween:
+		_flash_tween.kill()
+	_flash_tween = create_tween()
+	FantasyMaterials.tween_fx(_flash_tween, _model, &"fx_flash", 1.0, 0.0, 0.18)
+
+
+func _set_frost(target: float) -> void:
+	if _frost_tween:
+		_frost_tween.kill()
+	_frost_tween = create_tween()
+	FantasyMaterials.tween_fx(_frost_tween, _model, &"fx_frost", _frost, target, 0.25)
+	_frost = target
 
 
 func _die() -> void:
@@ -135,9 +158,20 @@ func _die() -> void:
 	died.emit(self)
 	_anim.speed_scale = 1.0
 	_play(&"Die")
+	var world := get_parent()
+	Effects.burst(world, &"death", global_position + Vector3.UP * 0.4, 1.6 if data.is_boss else 1.0)
+	if data.is_boss:
+		Effects.burst(world, &"souls", global_position + Vector3.UP * 1.0, 1.5)
+		Audio.play(&"boss_die")
+	else:
+		Audio.play(&"enemy_die", -5.0, 0.08)
+	if _frost_tween:
+		_frost_tween.kill()
+	FantasyMaterials.set_fx(_model, &"fx_frost", 0.0)
+	# the body falls, then burns away into embers
 	var tween := create_tween()
-	tween.tween_interval(_anim.get_animation(&"Die").length + 0.6)
-	tween.tween_property(self, "position:y", position.y - 1.5, 1.2)
+	tween.tween_interval(_anim.get_animation(&"Die").length + 0.2)
+	FantasyMaterials.tween_fx(tween, _model, &"fx_dissolve", 0.0, 1.0, 1.6 if data.is_boss else 1.1)
 	tween.tween_callback(queue_free)
 
 
@@ -145,6 +179,8 @@ func _start_cast() -> void:
 	_cast_left = CAST_TIME
 	_summon_left = data.summon_interval
 	_play(&"Cast" if _anim.has_animation(&"Cast") else &"Hit")
+	Audio.play(&"summon")
+	Effects.burst(get_parent(), &"portal", global_position + Vector3.UP * 1.2, 1.3)
 
 
 func _update_cast(delta: float) -> void:

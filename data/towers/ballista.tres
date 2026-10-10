@@ -11,36 +11,41 @@
 [sub_resource type="Resource" id="Resource_level1"]
 script = ExtResource("2_level")
 model = ExtResource("5_model1")
-cost = 90
-damage = 40.0
-attack_range = 9.0
-fire_rate = 0.9
+cost = 110
+damage = 90.0
+attack_range = 13.0
+fire_rate = 0.35
 
 [sub_resource type="Resource" id="Resource_level2"]
 script = ExtResource("2_level")
 model = ExtResource("6_model2")
-cost = 110
-damage = 70.0
-attack_range = 9.5
-fire_rate = 0.95
+cost = 140
+damage = 170.0
+attack_range = 14.5
+fire_rate = 0.38
 
 [sub_resource type="Resource" id="Resource_level3"]
 script = ExtResource("2_level")
 model = ExtResource("7_model3")
-cost = 180
-damage = 120.0
-attack_range = 10.0
-fire_rate = 1.0
+cost = 220
+damage = 300.0
+attack_range = 16.0
+fire_rate = 0.42
 
 [resource]
 script = ExtResource("1_script")
 id = &"ballista"
 display_name = "Баллиста"
-description = "Тяжёлые болты на большую дальность. Стреляет только по летающим."
+description = "Снайпер: огромная дальность и урон, но редкие выстрелы. Бьёт самого живучего врага в радиусе, по летающим — урон ×1.5."
 icon = ExtResource("4_icon")
-targets = 2
+targets = 3
+priority = 1
+air_damage_multiplier = 1.5
 projectile = ExtResource("3_projectile")
 projectile_speed = 30.0
 ballistic = false
 impact_color = Color(1.0, 0.85, 0.55, 1)
 levels = Array[ExtResource("2_level")]([SubResource("Resource_level1"), SubResource("Resource_level2"), SubResource("Resource_level3")])
+shoot_sound = &"ballista_shoot"
+impact_sound = &"arrow_hit"
+impact_effect = &"dust"

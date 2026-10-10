@@ -10,6 +10,7 @@ var _start := Vector3.ZERO
 var _time := 0.0
 var _flight := 1.0
 var _arc := 0.0
+var _trail: GPUParticles3D
 
 
 func setup(tower: TowerData, stats: TowerLevel, target: Enemy, from: Vector3) -> void:
@@ -26,8 +27,12 @@ func setup(tower: TowerData, stats: TowerLevel, target: Enemy, from: Vector3) ->
 
 
 func _ready() -> void:
-	add_child(_tower.projectile.instantiate())
+	var model := _tower.projectile.instantiate()
+	add_child(model)
+	FantasyMaterials.apply(model)
 	global_position = _start
+	if not _tower.trail_effect.is_empty():
+		_trail = Effects.trail(self, _tower.trail_effect)
 
 
 func _physics_process(delta: float) -> void:
@@ -70,8 +75,17 @@ func _impact(at: Vector3) -> void:
 	elif is_instance_valid(_target) and _target.alive:
 		hit.append(_target)
 	for enemy in hit:
-		enemy.take_damage(_stats.damage)
+		enemy.take_damage(_stats.damage * (_tower.air_damage_multiplier if enemy.data.flying else 1.0))
 		if _stats.slow_factor < 1.0:
 			enemy.apply_slow(_stats.slow_factor, _stats.slow_duration)
-	Effects.impact(get_parent(), at, _tower.impact_color, maxf(_stats.splash_radius, 0.5))
+	var world := get_parent()
+	Effects.impact(world, at, _tower.impact_color, maxf(_stats.splash_radius, 0.5))
+	if _tower.impact_effect == &"explosion":
+		var size := clampf(_stats.splash_radius / 2.0, 0.7, 1.4)
+		for preset in [&"fire", &"smoke", &"sparks", &"debris"]:
+			Effects.burst(world, preset, at, size)
+	elif not _tower.impact_effect.is_empty():
+		Effects.burst(world, _tower.impact_effect, at, 1.0 if _stats.splash_radius <= 0.0 else 1.5)
+	Audio.play(_tower.impact_sound, -4.0, 0.05)
+	Effects.release_trail(_trail, world)
 	queue_free()

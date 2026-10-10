@@ -44,3 +44,5 @@ projectile_speed = 24.0
 ballistic = false
 impact_color = Color(1.0, 0.85, 0.55, 1)
 levels = Array[ExtResource("2_level")]([SubResource("Resource_level1"), SubResource("Resource_level2"), SubResource("Resource_level3")])
+impact_sound = &"arrow_hit"
+impact_effect = &"dust"

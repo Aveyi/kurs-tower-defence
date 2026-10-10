@@ -48,6 +48,8 @@ func _ready() -> void:
 	build.setup(self)
 	hud.setup(self)
 	_countdown = FIRST_WAVE_DELAY
+	Effects.prewarm(_projectiles)
+	Audio.play_music(&"battle")
 
 
 func _process(delta: float) -> void:
@@ -89,6 +91,9 @@ func build_tower(data: TowerData, cell: Vector2i) -> Tower:
 	tower.position = map.cell_center(cell) + Vector3(0, Map.PLOT_HEIGHT, 0)
 	_tower_root.add_child(tower)
 	_towers[cell] = tower
+	Audio.play(&"build")
+	Effects.burst(_projectiles, &"dust", tower.position, 2.0)
+	Effects.burst(_projectiles, &"gold", tower.position + Vector3.UP * 0.5)
 	return tower
 
 
@@ -97,6 +102,8 @@ func upgrade_tower(tower: Tower) -> bool:
 		return false
 	_spend(tower.upgrade_cost())
 	tower.upgrade()
+	Audio.play(&"upgrade")
+	Effects.burst(_projectiles, &"gold", tower.position + Vector3.UP * 1.0, 1.6)
 	return true
 
 
@@ -104,6 +111,8 @@ func sell_tower(tower: Tower) -> void:
 	gold += tower.sell_value()
 	gold_changed.emit(gold)
 	_towers.erase(tower.cell)
+	Audio.play(&"sell")
+	Effects.burst(_projectiles, &"dust", tower.position, 2.0)
 	tower.queue_free()
 
 
@@ -121,6 +130,11 @@ func _on_enemy_spawned(enemy: Enemy) -> void:
 func _on_enemy_died(enemy: Enemy) -> void:
 	gold += enemy.data.reward
 	gold_changed.emit(gold)
+	Audio.play(&"coin", -8.0, 0.08)
+	Effects.floating_text(_projectiles, enemy.global_position + Vector3.UP * (enemy.data.hp_bar_height + 0.3),
+			"+%d" % enemy.data.reward, Color(1.0, 0.85, 0.3))
+	if enemy.data.is_boss:
+		camera_rig.shake(0.3)
 
 
 func _on_enemy_reached_end(enemy: Enemy) -> void:
@@ -128,6 +142,12 @@ func _on_enemy_reached_end(enemy: Enemy) -> void:
 		return
 	lives = maxi(lives - enemy.data.damage, 0)
 	lives_changed.emit(lives)
+	Audio.play(&"castle_hit", 0.0, 0.25)
+	camera_rig.shake(0.25 + 0.04 * enemy.data.damage)
+	var gate := enemy.global_position + Vector3.UP * 0.8
+	Effects.impact(_projectiles, gate, Color(1.0, 0.3, 0.2), 1.0)
+	Effects.burst(_projectiles, &"debris", gate)
+	Effects.burst(_projectiles, &"dust", gate, 1.5)
 	if lives == 0:
 		_finish(false)
 
@@ -139,6 +159,7 @@ func _on_wave_cleared(_index: int, bonus: int) -> void:
 	gold_changed.emit(gold)
 	if spawner.has_next_wave():
 		_countdown = WAVE_DELAY
+		Audio.play(&"wave_clear")
 	else:
 		_finish(true)
 
@@ -147,6 +168,8 @@ func _finish(victory: bool) -> void:
 	over = true
 	set_fast(false)
 	build.clear()
+	Audio.stop_music(1.0)
+	Audio.play(&"victory" if victory else &"defeat")
 	game_over.emit(victory)
 
 

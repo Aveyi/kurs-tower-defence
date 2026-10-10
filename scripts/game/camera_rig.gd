@@ -24,6 +24,7 @@ var _distance := 26.0
 var _target_distance := 26.0
 var _yaw := 0.0
 var _dragging := false
+var _shake := 0.0
 
 @onready var camera: Camera3D = $Camera3D
 
@@ -34,6 +35,11 @@ func setup(map_bounds: Rect2, focus: Vector3, distance := 26.0) -> void:
 	_distance = distance
 	_target_distance = distance
 	_apply()
+
+
+## Shakes the view (amount ~0.1 light .. 0.5 heavy); stronger shakes override weaker ones.
+func shake(amount: float) -> void:
+	_shake = maxf(_shake, amount)
 
 
 ## Multiplies the target distance (factor < 1 zooms in).
@@ -50,6 +56,10 @@ func _process(delta: float) -> void:
 	if key_zoom != 0.0:
 		zoom_by(exp(key_zoom * key_zoom_speed * real_delta))
 	_distance = lerpf(_distance, _target_distance, 1.0 - exp(-10.0 * real_delta))
+	_shake = maxf(_shake - real_delta * 1.5, 0.0)
+	var k := _shake * _shake * (_distance / 20.0)
+	camera.h_offset = randf_range(-1.0, 1.0) * k
+	camera.v_offset = randf_range(-1.0, 1.0) * k
 	_apply()
 
 

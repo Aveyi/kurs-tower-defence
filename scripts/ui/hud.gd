@@ -44,6 +44,10 @@ func _ready() -> void:
 	%MenuButton.pressed.connect(func() -> void: game.to_menu())
 	%EndRestartButton.pressed.connect(func() -> void: game.restart())
 	%EndMenuButton.pressed.connect(func() -> void: game.to_menu())
+	for bus in [&"Music", &"SFX"]:
+		var slider: HSlider = get_node("%%%sSlider" % bus)
+		slider.value = Audio.get_volume(bus)
+		slider.value_changed.connect(func(v: float) -> void: Audio.set_volume(bus, v))
 
 
 func setup(owner_game: Game) -> void:
@@ -58,6 +62,7 @@ func setup(owner_game: Game) -> void:
 	game.build.selection_cleared.connect(_on_selection_cleared)
 	for data in game.tower_types:
 		_add_tower_button(data)
+	Audio.wire_buttons(self)
 	_on_gold_changed(game.gold)
 	lives_label.text = str(game.lives)
 	wave_label.text = "Волна 0 / %d" % game.spawner.wave_count()
@@ -84,8 +89,8 @@ func _unhandled_input(event: InputEvent) -> void:
 # --- top bar -------------------------------------------------------------------------------
 func _on_gold_changed(gold: int) -> void:
 	gold_label.text = str(gold)
-	for data: TowerData in _tower_buttons:
-		_tower_buttons[data].disabled = gold < data.levels[0].cost
+	for data: TowerData in _tower_buttons:  # unaffordable towers look dim but still answer a click
+		_tower_buttons[data].modulate = Color.WHITE if gold >= data.levels[0].cost else Color(0.6, 0.55, 0.55)
 	if tower_panel.visible and game.build.selected_tower:
 		_refresh_tower_panel(game.build.selected_tower)
 
@@ -143,6 +148,15 @@ func _on_build_pressed(data: TowerData) -> void:
 	var tower := game.build_tower(data, game.build.selected_cell)
 	if tower:
 		game.build.select_tower(tower)
+	elif game.gold < data.levels[0].cost:
+		_not_enough_gold()
+
+
+func _not_enough_gold() -> void:
+	Audio.play(&"error")
+	var tween := create_tween()
+	gold_label.modulate = Color(1.0, 0.3, 0.25)
+	tween.tween_property(gold_label, "modulate", Color.WHITE, 0.6)
 
 
 func _on_plot_selected(_cell: Vector2i) -> void:
@@ -172,7 +186,10 @@ func _refresh_tower_panel(tower: Tower) -> void:
 		"Дальность: %s м" % _num(s.attack_range),
 		"Выстрелов в секунду: %s" % _num(s.fire_rate),
 		"Цели: %s" % tower.data.targets_text(),
+		"Приоритет: %s" % tower.data.priority_text(),
 	])
+	if tower.data.air_damage_multiplier != 1.0:
+		lines.append("Урон по летающим: ×%s" % _num(tower.data.air_damage_multiplier))
 	if s.splash_radius > 0.0:
 		lines.append("Урон по площади: %s м" % _num(s.splash_radius))
 	if s.slow_factor < 1.0:
@@ -180,10 +197,12 @@ func _refresh_tower_panel(tower: Tower) -> void:
 	tower_stats.text = "\n".join(lines)
 	if tower.can_upgrade():
 		upgrade_button.text = "Улучшить — %d" % tower.upgrade_cost()
-		upgrade_button.disabled = game.gold < tower.upgrade_cost()
+		upgrade_button.disabled = false
+		upgrade_button.modulate = Color.WHITE if game.gold >= tower.upgrade_cost() else Color(0.6, 0.55, 0.55)
 	else:
 		upgrade_button.text = "Максимальный уровень"
 		upgrade_button.disabled = true
+		upgrade_button.modulate = Color.WHITE
 	sell_button.text = "Продать +%d" % tower.sell_value()
 
 
@@ -191,6 +210,8 @@ func _on_upgrade_pressed() -> void:
 	var tower := game.build.selected_tower
 	if tower and game.upgrade_tower(tower):
 		game.build.select_tower(tower)
+	elif tower and tower.can_upgrade():
+		_not_enough_gold()
 
 
 func _on_sell_pressed() -> void:
