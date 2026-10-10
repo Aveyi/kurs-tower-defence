@@ -11,7 +11,7 @@ from functools import partial
 
 from mathutils import Euler, Quaternion, Vector
 
-from env import ENV, FOLIAGE, stone_wall
+from env import ENV, FOLIAGE, stone_wall, terrain_tile
 from lowpoly import Model, rag, rots
 from towers import KINGDOM, METALS, polar
 
@@ -326,15 +326,17 @@ def glow_mushrooms():
 
 
 # --- graves -----------------------------------------------------------------------------------
-def _headstone(m, F, w=0.48, h=0.6, rune=0):
-    """Rounded headstone on a plinth, facing local -Y."""
+def _headstone(m, F, w=0.48, h=0.6, rune=0, lit=True):
+    """Rounded headstone on a plinth, facing local -Y; `lit` adds the faint glowing rune."""
     m.box("root", "stone2", F.p((0, 0, 0.06)), (w + 0.14, 0.26, 0.12), rot=F.r(), bevel=0.02)
     m.box("root", "stone", F.p((0, 0, 0.1 + h / 2)), (w, 0.13, h), rot=F.r(), bevel=0.02, jitter=0.004)
     m.cyl("root", "stone", F.p((0, 0, 0.1 + h)), r=w / 2, h=0.13, n=10, rot=F.r((90, 0, 0)))
     for z, lw in ((0.38, 0.3), (0.31, 0.24), (0.25, 0.28)):
         m.box("root", "stone2", F.p((0, -0.062, z * h / 0.6)), (lw * w / 0.48, 0.012, 0.025), rot=F.r())
-    m.ring("root", "rune", F.p((0, -0.068, 0.1 + h * 0.85)), 0.075, 0.011, n=12, m=3, rot=F.r((90, 0, 0)), glow=True)
-    _glyph(m, F, (0, -0.07, 0.1 + h * 0.85), kind=rune, s=0.8)
+    if lit:
+        m.ring("root", "rune", F.p((0, -0.068, 0.1 + h * 0.85)), 0.075, 0.011, n=12, m=3, rot=F.r((90, 0, 0)),
+               glow=True)
+        _glyph(m, F, (0, -0.07, 0.1 + h * 0.85), kind=rune, s=0.8)
 
 
 def grave(v):
@@ -814,3 +816,154 @@ PROPS = dict(
     crypt=crypt, obelisk=obelisk, cemetery_fence=cemetery_fence, cemetery_gate=cemetery_gate,
     ghost_lantern=ghost_lantern, ruin_columns=ruin_columns, ruin_arch=ruin_arch, ruin_wall=ruin_wall,
     ritual_stones=ritual_stones, bones=bones, scarecrow=scarecrow, witch_cauldron=witch_cauldron)
+
+
+# --- terrain tiles ------------------------------------------------------------------------------
+# Same shapes and edge profiles as env.TILES, so Map's auto-tiling works unchanged; names get "haunt_".
+# Withered grass stays slightly green so shaders/ground.gdshader still adds its patches to it.
+GROUND = dict(HAUNT, grass="#4C6236", soil="#4A3C2E", soil2="#372C23", road="#665846", road2="#584B3C",
+              road3="#736451", mud="#4A3D30", pebble="#66646C", pebble2="#78767E", pebble3="#55535B",
+              tuft="#6E6B42", tuft2="#59603A", rock="#6E6C74", rock2="#5E5C64", rock3="#807E86",
+              leafd="#6B4A2A", leafd2="#7E5B30", leafd3="#5A3F28", pave="#5E5C64")
+
+
+def _litter(m, rng, free, leaves=10, twigs=2, bones=0, shrooms=0, dirt=0):
+    """Bare earth patches, fallen leaves, twigs, bone fragments and tiny glowing mushrooms on free ground."""
+    def spot():
+        for _ in range(30):
+            x, y = rng.uniform(-0.9, 0.9), rng.uniform(-0.9, 0.9)
+            if free(x, y, 0.04):
+                return x, y
+        return None
+
+    for _ in range(dirt):
+        p = spot()
+        if p and max(abs(p[0]), abs(p[1])) < 0.6:
+            m.ball("root", rng.choice(("earth", "earth3")), (p[0], p[1], -0.005), (rng.uniform(0.35, 0.6),
+                   rng.uniform(0.3, 0.5), 0.045), rot=(0, 0, rng.uniform(0, 180)), jitter=0.01)
+    for _ in range(leaves):
+        p = spot()
+        if p:
+            m.prism("root", rng.choice(("leafd", "leafd2", "leafd3")), [(0, -0.05), (0.035, 0), (0, 0.05), (-0.035, 0)],
+                    0.008, loc=(p[0], p[1], 0.016), rot=(90 + rng.uniform(-8, 8), 0, rng.uniform(0, 180)))
+    for _ in range(twigs):
+        p = spot()
+        if p:
+            a, length = rng.uniform(0, math.tau), rng.uniform(0.2, 0.35)
+            end = (p[0] + math.cos(a) * length, p[1] + math.sin(a) * length, 0.02)
+            if max(abs(end[0]), abs(end[1])) > 0.9 or not free(end[0], end[1], 0.0):
+                continue
+            m.seg("root", "deadbark3", (p[0], p[1], 0.02), end, 0.013, 0.006, n=4)
+            mid = Vector((p[0], p[1], 0.02)).lerp(Vector(end), 0.5)
+            m.seg("root", "deadbark3", mid, mid + Vector((math.cos(a + 0.7) * 0.09, math.sin(a + 0.7) * 0.09, 0.0)),
+                  0.007, 0.003, n=3)
+    for _ in range(bones):
+        p = spot()
+        if p:
+            a = rng.uniform(0, math.tau)
+            _bone(m, (p[0], p[1], 0.02), (p[0] + math.cos(a) * 0.16, p[1] + math.sin(a) * 0.16, 0.02), 0.011)
+    for _ in range(shrooms):
+        p = spot()
+        if p:
+            for k in range(rng.randint(2, 3)):
+                x, y, h = p[0] + rng.uniform(-0.05, 0.05), p[1] + rng.uniform(-0.05, 0.05), rng.uniform(0.04, 0.08)
+                m.seg("root", "stem2", (x, y, 0), (x, y, h), 0.008, n=4)
+                m.cyl("root", "rune", (x, y, h + 0.008), r=0.025, r2=0.008, h=0.016, n=6, glow=True)
+
+
+def _flagstones(m, rng, on_road, height, keep=0.55):
+    """Remains of an ancient paved path: sunken, tilted flagstones, many missing."""
+    step = 0.27
+    for i in range(-4, 5):
+        for j in range(-4, 5):
+            x, y = i * step + rng.uniform(-0.03, 0.03), j * step + rng.uniform(-0.03, 0.03)
+            if max(abs(x), abs(y)) > 0.9 or not on_road(x, y, -0.12) or rng.random() > keep:
+                continue
+            s = rng.uniform(0.17, 0.23)
+            m.box("root", rng.choice(("stone", "stone2", "stone3")), (x, y, height(x, y) + 0.006),
+                  (s, s * rng.uniform(0.8, 1.1), 0.04), rot=(rng.uniform(-3, 3), rng.uniform(-3, 3), rng.uniform(-12, 12)),
+                  bevel=0.012, jitter=0.006)
+
+
+def _small_grave(m, rng, x, y, kind, lit=False):
+    """Grave in a quarter of a cemetery tile: the stone at the head (+Y), the mound in front (-Y)."""
+    _mound(m, x, y - 0.14, 0.5, 0.27, h=0.24)
+    F = Frame((x, y + 0.24, 0), (rng.uniform(-6, 4), rng.uniform(-6, 6), rng.uniform(-8, 8)))
+    if kind == "stone":
+        _headstone(m, F, w=0.3, h=0.32, rune=rng.randrange(3), lit=lit)
+    elif kind == "cross":
+        m.box("root", "stone2", F.p((0, 0, 0.04)), (0.22, 0.16, 0.08), rot=F.r(), bevel=0.015)
+        m.box("root", "stone3", F.p((0, 0, 0.32)), (0.07, 0.07, 0.5), rot=F.r(), bevel=0.01)
+        m.box("root", "stone3", F.p((0, 0, 0.44)), (0.28, 0.07, 0.07), rot=F.r(), bevel=0.01)
+        if lit:
+            _glyph(m, F, (0, -0.04, 0.44), kind=0, s=0.5)
+    elif kind == "broken":
+        m.box("root", "stone2", F.p((0, 0, 0.04)), (0.4, 0.2, 0.08), rot=F.r(), bevel=0.015)
+        m.prism("root", "stone", [(-0.15, 0.08), (0.15, 0.08), (0.15, 0.3), (0.06, 0.36), (0.0, 0.28), (-0.08, 0.4),
+                                  (-0.15, 0.34)], 0.09, loc=F.p((0, 0, 0)), rot=F.r())
+        if lit:
+            _glyph(m, F, (-0.05, -0.048, 0.22), kind=2, s=0.6)
+    else:  # ledger slab lying on the grave with a cross in relief
+        m.box("root", "stone", (x, y - 0.05, 0.12), (0.32, 0.6, 0.07), rot=(2, 0, rng.uniform(-5, 5)), bevel=0.015)
+        m.box("root", "stone3", (x, y + 0.02, 0.16), (0.05, 0.3, 0.015))
+        m.box("root", "stone3", (x, y + 0.08, 0.16), (0.18, 0.05, 0.015))
+    if rng.random() < 0.5:
+        _moss(m, F.p((rng.uniform(-0.08, 0.08), 0.0, 0.06)), (0.16, 0.14, 0.05))
+
+
+def _graves(layout, candles=0, shrooms=0, bush=False):
+    def extra(m, rng, free, height, on_road):
+        for x, y, kind, lit in layout:
+            _small_grave(m, rng, x, y, kind, lit)
+        for k in range(candles):
+            _candle(m, (0.08 + 0.09 * k, -0.85 + 0.05 * (k % 2), 0.0), 0.08 + 0.03 * (k % 2), 0.02)
+        if bush:
+            for k in range(5):
+                a = math.radians(k * 72 + rng.uniform(-15, 15))
+                _limb(m, (0.62, -0.7, 0), (math.cos(a) * 0.5, math.sin(a) * 0.5, 1), rng.uniform(0.3, 0.45), 0.022,
+                      2, color="deadbark3", spread=32, forks=(2, 2), wander=0.4, rise=0.08)
+        _litter(m, rng, lambda x, y, margin=0.0: free(x, y, margin) and not any(
+            abs(x - gx) < 0.22 and -0.5 < y - gy < 0.4 for gx, gy, _, _ in layout), leaves=8, twigs=1, shrooms=shrooms)
+    return extra
+
+
+def haunt_tile(name, colors=GROUND, extra=None, plot=False, **kw):
+    def details(m, rng, free, height, on_road):
+        if kw.get("road"):
+            _flagstones(m, rng, on_road, height)
+        if plot:  # faint rune ring around the paved top and some moss on the rim
+            m.ring("root", "rune", (0, 0, 0.088), 0.66, 0.012, n=24, m=3, glow=True)
+            for deg in (40, 200):
+                _moss(m, polar(0.86, deg, 0.06), (0.22, 0.16, 0.06), rot=(0, 0, deg))
+        if extra:
+            extra(m, rng, free, height, on_road)
+    return terrain_tile(name, plot=plot, colors=colors, glow=GLOW, glow_strength=GLOW_STRENGTH, extra=details, **kw)
+
+
+def _ground_litter(**kw):
+    return lambda m, rng, free, height, on_road: _litter(m, rng, free, **kw)
+
+
+TILES = dict(
+    haunt_grass_1=partial(haunt_tile, "HauntGrass1", tufts=5, rocks=1, seed=31, extra=_ground_litter(leaves=12, twigs=2, dirt=1)),
+    haunt_grass_2=partial(haunt_tile, "HauntGrass2", tufts=3, seed=32,
+                          extra=_ground_litter(leaves=8, twigs=1, bones=1, shrooms=1, dirt=2)),
+    haunt_grass_3=partial(haunt_tile, "HauntGrass3", tufts=4, rocks=4, seed=33, extra=_ground_litter(leaves=6, twigs=3, dirt=1)),
+    haunt_road_straight=partial(haunt_tile, "HauntRoadStraight", road="straight", tufts=3, seed=34,
+                                extra=_ground_litter(leaves=5)),
+    haunt_road_corner=partial(haunt_tile, "HauntRoadCorner", road="corner", tufts=3, seed=35,
+                              extra=_ground_litter(leaves=5, twigs=1)),
+    haunt_road_t=partial(haunt_tile, "HauntRoadT", road="t", tufts=2, seed=36, extra=_ground_litter(leaves=4)),
+    haunt_road_cross=partial(haunt_tile, "HauntRoadCross", road="cross", tufts=2, seed=37, extra=_ground_litter(leaves=3)),
+    haunt_road_end=partial(haunt_tile, "HauntRoadEnd", road="end", tufts=4, seed=38, extra=_ground_litter(leaves=5)),
+    haunt_plot=partial(haunt_tile, "HauntPlot", plot=True, tufts=3, seed=39, extra=_ground_litter(leaves=6)),
+    # cemetery cells (instead of the river on level 1); graves face south (+Z in Godot), place unrotated
+    haunt_graves_1=partial(haunt_tile, "HauntGraves1", tufts=3, seed=40, extra=_graves(
+        [(-0.5, -0.4, "stone", False), (0.5, -0.4, "cross", True), (-0.5, 0.5, "stone", False),
+         (0.5, 0.5, "broken", False)])),
+    haunt_graves_2=partial(haunt_tile, "HauntGraves2", tufts=2, seed=41, extra=_graves(
+        [(-0.5, -0.4, "slab", False), (0.5, -0.4, "stone", True), (-0.5, 0.5, "cross", False)], candles=3,
+        shrooms=1)),
+    haunt_graves_3=partial(haunt_tile, "HauntGraves3", tufts=4, seed=42, extra=_graves(
+        [(-0.5, 0.5, "broken", True), (0.45, 0.5, "stone", False), (-0.5, -0.4, "cross", False)], bush=True)),
+)

@@ -313,7 +313,105 @@ def music_menu():
                    flute_gain=0.45, intensity=[0.4] * 16)
 
 
-MUSIC = dict(menu=music_menu, battle=music_battle)
+# --- level 2 "Haunted Forest": E harmonic minor with a Phrygian F, slower and darker --------------
+HAUNT_CHORDS = {  # root MIDI note and chord tones
+    "Em": (52, (0, 3, 7)), "C": (48, (0, 4, 7)), "Am": (57, (0, 3, 7)), "B": (47, (0, 4, 7)), "F": (53, (0, 4, 7)),
+}
+HAUNT_A = ["Em", "Em", "C", "B", "Am", "F", "B", "B"]
+HAUNT_B = ["Am", "Em", "F", "Em", "Am", "C", "B", "B"]
+HAUNT_MELODY_A = [
+    [(None, 1), (76, 1), (79, 1), (83, 1)],
+    [(84, 1.5), (83, 0.5), (79, 1), (76, 1)],
+    [(None, 1), (76, 1), (79, 1), (84, 1)],
+    [(83, 2), (75, 1), (78, 1)],
+    [(81, 1.5), (79, 0.5), (76, 1), (72, 1)],
+    [(77, 1.5), (76, 0.5), (77, 1), (81, 1)],
+    [(83, 1), (81, 0.5), (79, 0.5), (78, 1), (75, 1)],
+    [(75, 1.5), (71, 0.5), (None, 2)],
+]
+HAUNT_MELODY_B = [
+    [(72, 1), (76, 1), (81, 1.5), (79, 0.5)],
+    [(79, 1.5), (76, 0.5), (71, 2)],
+    [(77, 1), (81, 1), (84, 1.5), (83, 0.5)],
+    [(83, 2), (79, 1), (76, 1)],
+    [(81, 1), (84, 1), (88, 1.5), (87, 0.5)],
+    [(88, 1.5), (84, 0.5), (79, 1), (76, 1)],
+    [(78, 1), (75, 1), (83, 1), (81, 0.5), (78, 0.5)],
+    [(75, 2), (None, 2)],
+]
+
+
+def _seamless(x, n, fade):
+    """Cut a sustained signal (at least n + fade long) to exactly n samples that loop without a click:
+    the start is cross-faded with what would have followed the end."""
+    out = x[:n].copy()
+    ramp = np.linspace(0.0, 1.0, fade)
+    out[:fade] = x[:fade] * ramp + x[n:n + fade] * (1 - ramp)
+    return out
+
+
+def music_battle_haunted():
+    """Mystical battle theme: drone, wordless choir, celesta melody, a tolling bell and wind; harp and drums
+    join in the second section, cellos, a heartbeat and a theremin doubling the tune in the second half."""
+    bpm = 92
+    beat = 60.0 / bpm
+    bar = 4 * beat
+    bars = HAUNT_A + HAUNT_B + HAUNT_A + HAUNT_B
+    melodies = HAUNT_MELODY_A + HAUNT_MELODY_B + HAUNT_MELODY_A + HAUNT_MELODY_B
+    length = len(bars) * bar
+    buf = np.zeros((s.samples(length + 5.0), 2))
+    n, fade = s.samples(length), s.samples(2.0)
+    for m, breath, gain, pan in ((40, 7.0, 0.22, -0.1), (52, 9.5, 0.1, 0.3)):  # E1 and E2 drones under everything
+        s.place(buf, _seamless(s.drone(s.midi(m), length + 2.5, breath=breath), n, fade), 0, gain, pan=pan)
+    for i, name in enumerate(bars):
+        t0 = i * bar
+        section = i // 8  # 0: intro, 1: + harp and drums, 2: + cellos, heartbeat, theremin, 3: everything
+        root, tones = HAUNT_CHORDS[name]
+        notes = [root + t for t in tones]
+        for k, m in enumerate(notes):
+            s.place(buf, s.choir(s.midi(m + 12), bar), t0, 0.09, pan=-0.6 + 0.6 * k)
+        if i % (4 if section % 2 == 0 else 2) == 0:  # funeral bell
+            s.place(buf, s.bell(s.midi(40), 4.5, decay=2.5), t0, 0.32, pan=-0.2)
+            s.place(buf, s.bell(s.midi(52), 3.0, decay=1.5), t0 + 0.02, 0.12, pan=0.25)
+        if i % 4 == 2:  # a gust of wind
+            gust = s.whoosh(bar * 2, 250, 900, width=2.0) * s.env_points(bar * 2, [(0, 0), (bar, 1), (bar * 2, 0)])
+            s.place(buf, gust, t0, 0.05 + 0.02 * section, pan=0.6 if i % 8 == 2 else -0.6)
+        if section >= 1:  # low harp arpeggio
+            up = [notes[0], notes[1], notes[2], notes[0] + 12, notes[2], notes[1]]
+            for j in range(8):
+                m = up[j % len(up)]
+                s.place(buf, s.pluck(s.midi(m), beat * 0.5, bright=0.6, tail=1.4, damp=False), t0 + j * beat / 2,
+                        0.11, pan=0.35)
+            s.place(buf, s.drum(85, 40, 0.8, 0.3, 0.3), t0, 0.4 if section < 3 else 0.55, pan=0.0)
+            s.place(buf, s.drum(150, 90, 0.4, 0.12, 0.35), t0 + 2.5 * beat, 0.22, pan=0.25)
+            if section == 3:
+                s.place(buf, s.drum(85, 40, 0.8, 0.3, 0.3), t0 + 3 * beat, 0.35, pan=-0.05)
+                s.place(buf, s.drum(150, 90, 0.4, 0.12, 0.35), t0 + 3.5 * beat, 0.2, pan=-0.25)
+        if section >= 2:  # cellos and a heartbeat
+            for at, m in ((0, notes[0] - 12), (2, notes[0] - 12 + 7)):
+                s.place(buf, s.strings(s.midi(m), beat * 1.9), t0 + at * beat, 0.1, pan=-0.3)
+            for at in (1, 3):
+                s.place(buf, s.drum(70, 38, 0.35, 0.12, 0.1), t0 + at * beat, 0.3, pan=0.0)
+                s.place(buf, s.drum(70, 38, 0.3, 0.1, 0.1), t0 + (at + 0.3) * beat, 0.2, pan=0.0)
+    for i, phrase in enumerate(melodies):
+        t = i * bar
+        section = i // 8
+        for m, beats in phrase:
+            if m is not None:
+                s.place(buf, s.celesta(s.midi(m), beats * beat), t, 0.32, pan=0.15)
+                if section >= 2:
+                    s.place(buf, s.theremin(s.midi(m - 12), beats * beat * 0.95), t, 0.16, pan=-0.2)
+            t += beats * beat
+    wet = s.reverb(buf, rt60=3.2, wet=0.38)
+    loop = wet[:n].copy()
+    tail = wet[n:]
+    loop[:len(tail)] += tail[:n]  # wrap the reverb tail around so the loop is seamless
+    # gentle soft-clip so the bells and drums do not set the level: as loud as the level 1 battle theme
+    loop = np.tanh(1.0 * s.normalize(loop, 1.0)) / np.tanh(1.0)
+    return s.normalize(loop, 0.85)
+
+
+MUSIC = dict(menu=music_menu, battle=music_battle, battle_haunted=music_battle_haunted)
 
 
 def main():

@@ -53,7 +53,7 @@ func _ready() -> void:
 	hud.setup(self)
 	_countdown = FIRST_WAVE_DELAY
 	Effects.prewarm(_projectiles)
-	Audio.play_music(&"battle")
+	Audio.play_music(level.music)
 
 
 func _process(delta: float) -> void:

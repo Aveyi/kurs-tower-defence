@@ -1,7 +1,7 @@
 """Build models headlessly:
     Blender -b --factory-startup -P tools/blender/build.py -- [name | category ...] [--no-preview]
 Categories: enemies, towers, projectiles, tiles, structures, props (default: everything).
-Groups: haunted (level 2 decor, written to models/props), haunted_mobs (level 2 enemies).
+Groups: haunted (level 2 decor, written to models/props), haunted_mobs (level 2 enemies), haunted_tiles (level 2 ground).
 Writes models/<category>/<name>.glb, art/blend/<name>.blend and art/previews/<name>.png.
 """
 import os
@@ -21,10 +21,11 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 CATALOG = {}
 for category, builders in (("enemies", mobs.MOBS), ("towers", towers.TOWERS), ("projectiles", towers.PROJECTILES),
                            ("tiles", env.TILES), ("structures", env.STRUCTURES), ("props", env.PROPS),
-                           ("props", haunted.PROPS), ("enemies", undead.MOBS)):
+                           ("props", haunted.PROPS), ("enemies", undead.MOBS),
+                           ("tiles", haunted.TILES)):
     for name, fn in builders.items():
         CATALOG[name] = (category, fn)
-GROUPS = dict(haunted=list(haunted.PROPS), haunted_mobs=list(undead.MOBS))
+GROUPS = dict(haunted=list(haunted.PROPS), haunted_mobs=list(undead.MOBS), haunted_tiles=list(haunted.TILES))
 
 args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 preview = "--no-preview" not in args

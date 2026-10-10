@@ -281,3 +281,41 @@ def whoosh(d, f0, f1, width=1.5):
     """Band-passed noise whose centre slides from f0 to f1."""
     centre = lambda t: f0 * (f1 / f0) ** min(max(t / d, 0), 1)  # noqa: E731
     return band_sweep(noise(d), lo_fn=lambda t: centre(t) / width, hi_fn=lambda t: centre(t) * width)
+
+
+# --- instruments for darker tracks ------------------------------------------------------------
+def choir(freq, d, attack=0.8):
+    """Wordless "ooh" choir: detuned voices with a slow vibrato through two vowel formants."""
+    total = d + 1.0
+    t = time(total)
+    out = np.zeros(len(t))
+    for k, cents in enumerate((-12, -4, 5, 11)):
+        vib = 1 + 0.004 * np.sin(2 * np.pi * (4.4 + 0.3 * k) * t + k)
+        out += saw(freq * 2 ** (cents / 1200) * vib, total, harmonics=14, rolloff=1.0)
+    voiced = band(out, lo=250, hi=520) + 0.55 * band(out, lo=700, hi=1150) + 0.12 * band(out, lo=2400, hi=3000)
+    return voiced * env_adsr(total, attack, 0.3, 0.85, 1.0) / 4
+
+
+def celesta(freq, d):
+    """Glassy music-box / celesta note."""
+    total = d + 1.2
+    t = time(total)
+    out = (np.sin(2 * np.pi * freq * t) * np.exp(-t / 0.9) + 0.35 * np.sin(2 * np.pi * freq * 2 * t) * np.exp(-t / 0.35)
+           + 0.12 * np.sin(2 * np.pi * freq * 4.02 * t) * np.exp(-t / 0.12))
+    return out * np.minimum(t / 0.002, 1)
+
+
+def theremin(freq, d):
+    """Eerie gliding sine with a wide vibrato."""
+    total = d + 0.3
+    t = time(total)
+    vib = 1 + 0.012 * np.sin(2 * np.pi * 6.0 * t) * np.clip(t / 0.3, 0, 1)
+    ph = phase(freq * vib, len(t))
+    return (np.sin(ph) + 0.12 * np.sin(2 * ph)) * env_adsr(total, 0.18, 0.2, 0.85, 0.3)
+
+
+def drone(freq, d, breath=7.0):
+    """Low dark drone (root + fifth) slowly breathing in and out."""
+    t = time(d)
+    x = saw(freq, d, harmonics=8, rolloff=1.4) + 0.5 * saw(freq * 1.5, d, harmonics=6, rolloff=1.6)
+    return band(x, hi=500) * (0.7 + 0.3 * np.sin(2 * np.pi * t / breath))

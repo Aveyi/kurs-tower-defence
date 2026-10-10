@@ -16,6 +16,8 @@ extends Resource
 @export_multiline var description := ""
 @export var preview: Texture2D
 @export var layout: PackedStringArray
+## Battle music: a track in assets/audio/music (built by tools/audio/build_audio.py).
+@export var music := &"battle"
 @export var start_gold := 220
 @export var lives := 20
 ## Enemy HP multiplier for wave n (counted from 0): 1 + hp_growth * n ^ hp_growth_power.

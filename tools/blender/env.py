@@ -44,11 +44,12 @@ PATHS = dict(
 )
 
 
-def _model(name, colors=None, glow="#FFB347", seed=1, rig=False, **kw):
+def _model(name, colors=None, glow="#FFB347", seed=1, rig=False, glow_strength=4.0, **kw):
     pal = dict(KINGDOM)
     pal.update(ENV)
     pal.update(colors or {})
-    m = Model(name, pal, glow_color=glow, glow_strength=4.0, metal=METALS, foliage=FOLIAGE, rig=rig, seed=seed, **kw)
+    m = Model(name, pal, glow_color=glow, glow_strength=glow_strength, metal=METALS, foliage=FOLIAGE, rig=rig,
+              seed=seed, **kw)
     m.bone("root", (0, 0, 0))
     m.flames, m.flags = [], []
     return m
@@ -60,8 +61,11 @@ def _smooth(t):
     return t * t * (3 - 2 * t)
 
 
-def terrain_tile(name, road=None, river=None, bridge=False, plot=False, tufts=0, flowers=0, rocks=0, seed=0):
-    m = _model(name, seed=seed, variance=0.05)
+def terrain_tile(name, road=None, river=None, bridge=False, plot=False, tufts=0, flowers=0, rocks=0, seed=0,
+                 colors=None, glow="#FFB347", glow_strength=4.0, extra=None):
+    """`colors` re-colours the palette (other locations), `extra(m, rng, free, height, on_road)` adds details
+    before the mesh is built (`free(x, y)`: not on the road / river / plot)."""
+    m = _model(name, colors, glow=glow, seed=seed, variance=0.05, glow_strength=glow_strength)
     rng = random.Random(seed)
     road_d = PATHS[road] if road else None
     river_d = PATHS[river] if river else None
@@ -182,6 +186,8 @@ def terrain_tile(name, road=None, river=None, bridge=False, plot=False, tufts=0,
         m.ball("root", rng.choice(("rock", "rock2", "rock3")), (x, y, s * 0.15), (s, s * 0.8, s * 0.6),
                rot=(0, 0, rng.uniform(0, 180)), jitter=s * 0.12)
 
+    if extra:
+        extra(m, rng, free, height, on_road)
     if bridge:
         _bridge(m)
     if plot:
