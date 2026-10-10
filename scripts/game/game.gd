@@ -41,10 +41,12 @@ func _ready() -> void:
 	Settings.changed.connect(_apply_graphics)
 	_apply_graphics()
 	map.build(level)
+	_apply_lighting(level.lighting)
 	gold = level.start_gold
 	lives = level.lives
 	spawner.setup(level, map, _enemies)
 	spawner.enemy_spawned.connect(_on_enemy_spawned)
+	map.portal_opened.connect(func(_i: int) -> void: camera_rig.shake(0.5))
 	spawner.wave_started.connect(func(i: int) -> void: wave_started.emit(i, spawner.wave_count()))
 	spawner.wave_cleared.connect(_on_wave_cleared)
 	var rect := map.bounds()
@@ -62,6 +64,49 @@ func _process(delta: float) -> void:
 		countdown_changed.emit(_countdown)
 		if _countdown <= 0.0:
 			start_next_wave()
+
+
+## Night (or any custom) lighting of the level; without one the scene's daylight stays as it is.
+func _apply_lighting(lighting: LevelLighting) -> void:
+	if lighting == null:
+		return
+	var sun: DirectionalLight3D = $Sun
+	sun.light_color = lighting.light_color
+	sun.light_energy = lighting.light_energy
+	sun.rotation_degrees = lighting.light_rotation
+	var environment: Environment = $WorldEnvironment.environment
+	environment.ambient_light_energy = lighting.ambient_energy
+	environment.ambient_light_sky_contribution = lighting.ambient_sky_contribution
+	environment.tonemap_exposure = lighting.exposure
+	environment.glow_intensity = lighting.glow_intensity
+	environment.glow_bloom = lighting.glow_bloom
+	environment.fog_enabled = lighting.fog_density > 0.0
+	environment.fog_light_color = lighting.fog_color
+	environment.fog_density = lighting.fog_density
+	environment.fog_sky_affect = 0.0
+	environment.fog_height = lighting.fog_height
+	environment.fog_height_density = lighting.fog_height_density
+	var sky: ShaderMaterial = environment.sky.sky_material
+	for param in [&"zenith_color", &"horizon_color", &"halo_color", &"cloud_light", &"cloud_shade", &"abyss_color"]:
+		sky.set_shader_parameter(param, lighting.get(param))
+	sky.set_shader_parameter(&"stars", lighting.stars)
+	sky.set_shader_parameter(&"moon", lighting.moon)
+	var grade: ShaderMaterial = $PostProcess/ColorGrade.material
+	for param in [&"saturation", &"contrast", &"shadow_tint", &"highlight_tint", &"vignette", &"vignette_color"]:
+		grade.set_shader_parameter(param, lighting.get(param))
+	map.set_ground_parameter(&"patch_dark", lighting.grass_patch_dark)
+	map.set_ground_parameter(&"patch_light", lighting.grass_patch_light)
+	map.add_prop_lights()
+	for i in map.portals.size():
+		var light := map.add_light(map.portals[i].position + Vector3.UP * 1.3, lighting.portal_light,
+				lighting.portal_light_energy if map.portal_open[i] else lighting.portal_light_energy * 0.15, 7.0)
+		map.portal_opened.connect(func(index: int) -> void:
+			if index == i:
+				create_tween().tween_property(light, "light_energy", lighting.portal_light_energy, 1.0))
+		map.portal_stirring.connect(func(index: int) -> void:
+			if index == i:
+				create_tween().tween_property(light, "light_energy", lighting.portal_light_energy * 0.4, 1.5))
+	map.add_light(map.castle_center + Vector3.UP * 2.6, lighting.castle_light, lighting.castle_light_energy, 9.0)
 
 
 func _apply_graphics() -> void:

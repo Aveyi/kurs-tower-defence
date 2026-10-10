@@ -3,8 +3,8 @@ extends Node3D
 ## Builds the level from LevelData.layout with the tiles and decorations of LevelData.map_theme:
 ## - tiles, road and river ones auto-picked and rotated from their neighbours;
 ## - a fenced cemetery with gates where roads enter it;
-## - the enemy portal, the castle and decorations;
-## - one enemy route (Curve3D) for every way along the road network from the portal to the
+## - the enemy portals ("S" open from the start, "s" sealed until open_portal()), the castle and decorations;
+## - one enemy route (Curve3D) for every way along the road network from each portal to the
 ##   castle gate; forks and rejoining branches are allowed.
 
 const CELL := 2.0
@@ -24,11 +24,21 @@ const VORTEX_SHADER := preload("res://shaders/portal_vortex.gdshader")
 ## Safety limit for route enumeration on badly designed maps (road grids explode combinatorially).
 const MAX_ROUTES := 32
 
+## A sealed portal opened (the HUD announces it).
+signal portal_opened(index: int)
+## A sealed portal stirs: it will open with the next wave.
+signal portal_stirring(index: int)
+
 var layout: PackedStringArray
 var size := Vector2i.ZERO
 var theme: MapTheme
-## Enemy routes from the portal to the castle, shortest first.
+## Enemy routes from the portals to the castle: the first portal's routes first, shortest first.
 var routes: Array[Curve3D] = []
+## Index into `portals` of the portal each route starts at.
+var route_portal: Array[int] = []
+## Portals in order: the "S" ones, then the sealed "s" ones; `portal` is the first.
+var portals: Array[Node3D] = []
+var portal_open: Array[bool] = []
 var portal: Node3D
 var castle: Node3D
 var castle_center := Vector3.ZERO
@@ -36,10 +46,13 @@ var castle_center := Vector3.ZERO
 ## Tiles and props are drawn in batches: one MultiMesh per model instead of hundreds of nodes.
 var _batches := {}  # model path -> [mesh, mesh offset, cast shadows, Array[Transform3D]]
 var _gate_column := -1
-var _portal_anim: AnimationPlayer
+var _portal_anims: Array[AnimationPlayer] = []
+var _vortices: Array = []  # per portal: its two vortex quads
 var _castle_flags: WindFlags
-var _last_portal_fx := -100000
+var _last_portal_fx := {}  # portal index -> msec
 var _landmark_bag: Array = []
+## Props placed so far with their transforms, for point lights (prop name -> Array[Transform3D]).
+var _placed := {}
 
 
 func build(level: LevelData) -> void:
@@ -54,7 +67,7 @@ func build(level: LevelData) -> void:
 	for row in size.y:
 		for col in size.x:
 			_place_tile(Vector2i(col, row), rng)
-	_place_portal()
+	_place_portals()
 	_place_castle()
 	_place_cemetery()
 	_build_routes()
@@ -70,7 +83,7 @@ func char_at(cell: Vector2i) -> String:
 
 
 func is_road(cell: Vector2i) -> bool:
-	return char_at(cell) in ["#", "=", "S"]
+	return char_at(cell) in ["#", "=", "S", "s"]
 
 
 func is_river(cell: Vector2i) -> bool:
@@ -111,16 +124,47 @@ func _process(_delta: float) -> void:
 		_castle_flags.update()
 
 
-func play_portal_spawn() -> void:
+func play_portal_spawn(index := 0) -> void:
 	var now := Time.get_ticks_msec()
-	if now - _last_portal_fx < 700:
+	if now - int(_last_portal_fx.get(index, -100000)) < 700:
 		return
-	_last_portal_fx = now
-	if _portal_anim:
-		_portal_anim.play(&"Spawn")
-		_portal_anim.queue(&"Idle")
-	Effects.burst(self, &"portal", portal.global_position + Vector3.UP * 1.25)
+	_last_portal_fx[index] = now
+	_portal_anims[index].play(&"Spawn")
+	_portal_anims[index].queue(&"Idle")
+	Effects.burst(self, &"portal", portals[index].global_position + Vector3.UP * 1.25)
 	Audio.play(&"portal_spawn", -6.0, 0.7)
+
+
+## A sealed portal that opens with the next wave stirs: sparks, falling stones, a faint light.
+func stir_portal(index: int) -> void:
+	if portal_open[index]:
+		return
+	var at := portals[index].global_position + Vector3.UP * 1.25
+	Effects.burst(self, &"portal", at, 1.2)
+	Effects.burst(self, &"debris", portals[index].global_position + Vector3.UP * 0.3, 0.6)
+	Audio.play(&"portal_spawn", -2.0)
+	portal_stirring.emit(index)
+
+
+## Opens a sealed portal: the vortex flares up and enemies may come out of it from now on.
+func open_portal(index: int) -> void:
+	if portal_open[index]:
+		return
+	portal_open[index] = true
+	var anim := _portal_anims[index]
+	anim.play(&"Spawn")
+	anim.queue(&"Idle")
+	for vortex: MeshInstance3D in _vortices[index]:
+		vortex.visible = true
+		vortex.scale = Vector3.ONE * 0.05
+		create_tween().tween_property(vortex, "scale", Vector3.ONE, 0.8).set_trans(Tween.TRANS_BACK) \
+				.set_ease(Tween.EASE_OUT)
+	var at := portals[index].global_position + Vector3.UP * 1.25
+	Effects.impact(self, at, Color(0.75, 0.3, 1.0), 2.0)
+	Effects.burst(self, &"portal", at, 2.0)
+	Effects.burst(self, &"debris", portals[index].global_position + Vector3.UP * 0.3, 1.2)
+	Audio.play(&"summon")
+	portal_opened.emit(index)
 
 
 # --- tiles ---------------------------------------------------------------------------------
@@ -128,7 +172,7 @@ func _place_tile(cell: Vector2i, rng: RandomNumberGenerator) -> void:
 	var tile := "grass_%d" % [1, 1, 2, 3][rng.randi() % 4]
 	var turns := rng.randi() % 4
 	match char_at(cell):
-		"#", "S":
+		"#", "S", "s":
 			var fit := _fit(_mask(cell, func(n: Vector2i) -> bool: return is_road(n) or _is_gate(n)), ROAD_TILES)
 			tile = fit[0]
 			turns = fit[1]
@@ -220,26 +264,45 @@ func _play_idle(node: Node3D) -> AnimationPlayer:
 	return anim
 
 
-func _place_portal() -> void:
-	var start := _find("S")[0]
-	var toward := Vector3.FORWARD
-	for d in DIRS:
-		if is_road(start + d):
-			toward = Vector3(d.x, 0, d.y)
-	portal = _instance("res://models/structures/portal.glb", cell_center(start), _yaw_toward(toward))
-	_portal_anim = _play_idle(portal)
+## Portal cells in index order: the open "S" ones, then the sealed "s" ones.
+func portal_cells() -> Array[Vector2i]:
+	return _find("S") + _find("s")
+
+
+func _place_portals() -> void:
 	var material := ShaderMaterial.new()
 	material.shader = VORTEX_SHADER
-	for side in [1.0, -1.0]:  # a quad on each face of the arch's dark disc
-		var vortex := MeshInstance3D.new()
-		var quad := QuadMesh.new()
-		quad.size = Vector2(1.62, 1.62)
-		vortex.mesh = quad
-		vortex.material_override = material
-		vortex.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		vortex.position = Vector3(0.0, 1.25, 0.03 * side)
-		vortex.rotation.y = 0.0 if side > 0.0 else PI
-		portal.add_child(vortex)
+	for start in portal_cells():
+		var toward := Vector3.FORWARD
+		for d in DIRS:
+			if is_road(start + d):
+				toward = Vector3(d.x, 0, d.y)
+		var node := _instance("res://models/structures/portal.glb", cell_center(start), _yaw_toward(toward))
+		var anim := _play_idle(node)
+		var quads := []
+		for side in [1.0, -1.0]:  # a quad on each face of the arch's dark disc
+			var vortex := MeshInstance3D.new()
+			var quad := QuadMesh.new()
+			quad.size = Vector2(1.62, 1.62)
+			vortex.mesh = quad
+			vortex.material_override = material
+			vortex.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			vortex.position = Vector3(0.0, 1.25, 0.03 * side)
+			vortex.rotation.y = 0.0 if side > 0.0 else PI
+			node.add_child(vortex)
+			quads.append(vortex)
+		var sealed := char_at(start) == "s"
+		if sealed:  # a dead arch: no vortex, the swirl shrunk away, only the runes glow
+			anim.stop()
+			var skeleton: Skeleton3D = node.find_child("Skeleton3D", true, false)
+			skeleton.set_bone_pose_scale(skeleton.find_bone("pulse"), Vector3.ONE * 0.01)
+			for vortex: MeshInstance3D in quads:
+				vortex.visible = false
+		portals.append(node)
+		portal_open.append(not sealed)
+		_portal_anims.append(anim)
+		_vortices.append(quads)
+	portal = portals[0]
 
 
 func _place_castle() -> void:
@@ -291,10 +354,11 @@ func _edge_prop(prop: String, cell: Vector2i, d: Vector2i, distance: float) -> v
 
 
 # --- routes ------------------------------------------------------------------------------
-## Every simple road path from the portal to the castle gate (cell lists). Forks multiply the count:
-## two forks with two branches each give four routes.
-func route_cells() -> Array:
-	var start := _find("S")[0]
+## Every simple road path from a portal (default: the first) to the castle gate (cell lists). Forks
+## multiply the count: two forks with two branches each give four routes.
+func route_cells(start := Vector2i(-1, -1)) -> Array:
+	if start.x < 0:
+		start = portal_cells()[0]
 	var found := []
 	_walk(start, {start: true}, [start], found)
 	found.sort_custom(func(a: Array, b: Array) -> bool: return a.size() < b.size())
@@ -319,10 +383,15 @@ func _walk(cell: Vector2i, seen: Dictionary, path: Array, found: Array) -> void:
 
 func _build_routes() -> void:
 	routes.clear()
-	for cells in route_cells():
-		routes.append(_curve_through(cells))
-	if routes.is_empty():
-		push_error("Map: no road leads from the portal to the castle gate")
+	route_portal.clear()
+	var starts := portal_cells()
+	for i in starts.size():
+		var cells_list := route_cells(starts[i])
+		if cells_list.is_empty():
+			push_error("Map: no road leads from the portal at %s to the castle gate" % starts[i])
+		for cells in cells_list:
+			routes.append(_curve_through(cells))
+			route_portal.append(i)
 
 
 ## Smooth path through the given road cells: straight through the middle of the tiles, quarter
@@ -350,6 +419,39 @@ func _curve_through(cells: Array) -> Curve3D:
 	return curve
 
 
+# --- lighting ------------------------------------------------------------------------------
+## Point lights at every placed prop listed in the theme's prop_lights (night levels).
+func add_prop_lights() -> void:
+	for prop in theme.prop_lights:
+		var spec: Array = theme.prop_lights[prop]
+		for at: Transform3D in _placed.get(prop, []):
+			add_light(at * (spec[0] as Vector3), spec[1], spec[2], spec[3])
+
+
+func add_light(at: Vector3, color: Color, energy: float, light_range: float) -> OmniLight3D:
+	var light := OmniLight3D.new()
+	light.light_color = color
+	light.light_energy = energy
+	light.omni_range = light_range
+	light.omni_attenuation = 1.6
+	light.light_specular = 0.2
+	light.shadow_enabled = false
+	add_child(light)
+	light.position = at
+	return light
+
+
+## Sets a parameter of the ground shader on this map's tiles (night grass colours).
+func set_ground_parameter(param: StringName, value: Variant) -> void:
+	for node in get_children():
+		if node is MultiMeshInstance3D and node.name.begins_with("tile_"):
+			var mesh: Mesh = node.multimesh.mesh
+			for i in mesh.get_surface_count():
+				var material := mesh.surface_get_material(i) as ShaderMaterial
+				if material and material.shader == FantasyMaterials.GROUND:
+					material.set_shader_parameter(param, value)
+
+
 # --- decorations ---------------------------------------------------------------------------
 func _near_road(cell: Vector2i) -> bool:
 	for d in DIRS:
@@ -374,6 +476,8 @@ func _prop(prop: String, cell: Vector2i, rng: RandomNumberGenerator, spread := 0
 
 
 func _batch(key: String, model: Array, cast_shadow: bool, at: Transform3D) -> void:
+	if key.begins_with("prop:"):
+		_placed.get_or_add(key.substr(5), []).append(at)
 	if not _batches.has(key):
 		_batches[key] = [model[0], model[1], cast_shadow, []]
 	_batches[key][3].append(at * model[1])
@@ -408,6 +512,8 @@ func _place_decor(rng: RandomNumberGenerator) -> void:
 				"T":
 					for i in rng.randi_range(1, 3):
 						_prop(trees[rng.randi() % trees.size()], cell, rng)
+				"t":
+					_prop(trees[rng.randi() % trees.size()], cell, rng, 0.35)
 				"r":
 					_prop(theme.rocks[rng.randi() % theme.rocks.size()], cell, rng, 0.3)
 					_prop(small[rng.randi() % small.size()], cell, rng)

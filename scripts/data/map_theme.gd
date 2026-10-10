@@ -25,3 +25,6 @@ extends Resource
 @export var cemetery_gate := ""
 ## Tiles taller than flat ground that should cast shadows.
 @export var shadow_tiles: PackedStringArray = ["bridge"]
+## Point lights at props (e.g. ghost lanterns, a crypt's door): prop name -> [offset in the prop's frame
+## (Vector3, Godot axes), Color, energy, range (m)]. Only created by maps whose level has a lighting.
+@export var prop_lights := {}

@@ -5,7 +5,7 @@ const PROGRESS_PATH := "user://progress.cfg"
 ## Levels shown on the level select screen, in order. An empty path is a level still in development.
 const LEVELS: Array[Dictionary] = [
 	{path = "res://data/levels/level_01.tres"},
-	{path = ""},
+	{path = "res://data/levels/level_02.tres"},
 ]
 
 ## Level to start when the game scene opens (null: the scene's own default).

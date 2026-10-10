@@ -125,7 +125,7 @@ func is_stunned() -> bool:
 func _end_stun() -> void:
 	_anim.speed_scale = 1.0
 	_tween_stun(0.0)
-	Effects.release_trail(_stun_sparks, get_parent())
+	Effects.release_trail(_stun_sparks, _projectiles)
 	_stun_sparks = null
 
 

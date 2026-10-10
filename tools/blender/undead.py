@@ -606,11 +606,13 @@ def golem():
         slam[f"thigh_{side}"] = dict(pitch=-35)
         slam[f"shin_{side}"] = dict(pitch=50)
         slam[f"foot_{side}"] = dict(pitch=-15)
+    # the fists land on frame 20 (Enemy.SLAM_HIT_TIME); a short hold, then the golem is quickly back on its
+    # feet - well before the stunned towers recover
     a.pose(0)
     a.pose(14, **up)
     a.pose(20, **slam)
-    a.pose(30, **slam)
-    a.pose(46)
+    a.pose(23, **slam)
+    a.pose(31)
     a.done()
     return m
 

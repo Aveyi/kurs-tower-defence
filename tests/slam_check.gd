@@ -70,6 +70,9 @@ func _tick() -> void:
 			_check(tower.is_stunned() == (dist <= radius), "tower %s at %.1f m: stunned=%s" % [tower.cell, dist,
 					tower.is_stunned()])
 		_check(not stunned.is_empty(), "%d of %d towers stunned" % [stunned.size(), towers.size()])
+		# the golem must be back on its feet well before the towers wake up
+		_check(golem._cast_left < golem.data.slam_stun - 1.0, "golem recovers %.2f s after the hit, towers after %.1f s" %
+				[golem._cast_left, golem.data.slam_stun])
 	if stun_frame > 0 and frame == stun_frame + 25:
 		root.get_texture().get_image().save_png("%s/slam_ring.png" % out_dir)
 		game.camera_rig.setup(game.map.bounds(), stunned[0].global_position + Vector3(0, 1.5, 0), 9.0)

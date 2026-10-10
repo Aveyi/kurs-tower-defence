@@ -16,6 +16,8 @@ var _banner_tween: Tween
 var _boss_tween: Tween
 ## True while the mouse is over the upgrade button: the panel previews the next level.
 var _upgrade_hover := false
+## Warnings waiting for the one on screen to finish: [title, subtitle, sound].
+var _alert_queue: Array = []
 
 @onready var gold_label: Label = %GoldLabel
 @onready var lives_label: Label = %LivesLabel
@@ -128,6 +130,10 @@ func _on_wave_started(index: int, total: int) -> void:
 			bosses.append(group.enemy.display_name)
 	if not bosses.is_empty():
 		_show_boss_warning(bosses)
+	if game.spawner.opened_portal >= 0:
+		_show_alert("Открылся второй портал!", "Враги идут с двух сторон", &"")
+	if game.spawner.portal_opens_next >= 0:
+		_show_alert("Второй портал пробуждается", "Он откроется со следующей волной — готовьте оборону", &"")
 
 
 func _on_countdown_changed(seconds: float) -> void:
@@ -337,9 +343,18 @@ func _show_banner(text: String, hold := 1.8) -> void:
 
 func _show_boss_warning(bosses: PackedStringArray) -> void:
 	var names := " и ".join(bosses)
-	boss_title.text = ("Приближаются %s" if bosses.size() > 1 else "Приближается %s") % names
-	boss_subtitle.text = "Боссы вступают в бой" if bosses.size() > 1 else "Босс вступает в бой"
-	Audio.play(&"summon", -2.0)
+	_show_alert(("Приближаются %s" if bosses.size() > 1 else "Приближается %s") % names,
+			"Боссы вступают в бой" if bosses.size() > 1 else "Босс вступает в бой", &"summon")
+
+
+## The big pulsing warning across the middle of the screen (bosses, a portal opening).
+func _show_alert(title: String, subtitle: String, sound: StringName) -> void:
+	if _boss_tween and _boss_tween.is_running():  # one at a time: the next waits its turn
+		_alert_queue.append([title, subtitle, sound])
+		return
+	boss_title.text = title
+	boss_subtitle.text = subtitle
+	Audio.play(sound, -2.0)
 	if _boss_tween:
 		_boss_tween.kill()
 	boss_warning.pivot_offset = boss_warning.size / 2.0
@@ -354,6 +369,13 @@ func _show_boss_warning(bosses: PackedStringArray) -> void:
 		_boss_tween.tween_property(boss_title, "modulate", Color.WHITE, 0.35)
 	_boss_tween.tween_interval(1.2)
 	_boss_tween.tween_property(boss_warning, "modulate:a", 0.0, 0.8)
+	_boss_tween.tween_callback(_next_alert)
+
+
+func _next_alert() -> void:
+	if not _alert_queue.is_empty():
+		var alert: Array = _alert_queue.pop_front()
+		_show_alert.call_deferred(alert[0], alert[1], alert[2])
 
 
 func _on_game_over(victory: bool) -> void:

@@ -91,21 +91,36 @@ func _tick() -> void:
 		quit(1)
 
 
-## Tower plots sorted by how much of the enemy routes they cover within `reach` metres.
-static func ranked_plots(map, reach: float) -> Array:
+## Tower plots sorted by how much of the enemy routes they cover within `reach` metres
+## (`open_only`: only routes from portals that are open now; `portal` >= 0: only that portal's routes).
+static func ranked_plots(map, reach: float, open_only := false, portal := -1) -> Array:
+	var cover := plot_coverage(map, reach, open_only, portal)
+	var plots := []
+	for cell in cover:
+		plots.append([cover[cell], cell])
+	plots.sort_custom(func(a, b) -> bool: return a[0] > b[0])
+	return plots.map(func(p): return p[1])
+
+
+## Plot cell -> how many 2 m road samples of the chosen routes lie within `reach` metres (see ranked_plots).
+static func plot_coverage(map, reach: float, open_only := false, portal := -1) -> Dictionary:
 	var samples := []
-	for curve in map.routes:
+	for r in map.routes.size():
+		if open_only and not map.portal_open[map.route_portal[r]]:
+			continue
+		if portal >= 0 and map.route_portal[r] != portal:
+			continue
+		var curve: Curve3D = map.routes[r]
 		var length: float = curve.get_baked_length()
 		for d in range(0, int(length), 2):
 			var p: Vector3 = curve.sample_baked(d)
 			if not samples.any(func(q) -> bool: return q.distance_to(p) < 1.0):
 				samples.append(p)
-	var plots := []
+	var cover := {}
 	for row in map.size.y:
 		for col in map.size.x:
 			var cell := Vector2i(col, row)
 			if map.is_plot(cell):
 				var at: Vector3 = map.cell_center(cell)
-				plots.append([samples.filter(func(q) -> bool: return q.distance_to(at) <= reach).size(), cell])
-	plots.sort_custom(func(a, b) -> bool: return a[0] > b[0])
-	return plots.map(func(p): return p[1])
+				cover[cell] = samples.filter(func(q) -> bool: return q.distance_to(at) <= reach).size()
+	return cover

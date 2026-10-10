@@ -1,0 +1,320 @@
+[gd_resource type="Resource" script_class="LevelData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/level_data.gd" id="1_level"]
+[ext_resource type="Script" path="res://scripts/data/wave_data.gd" id="2_wave"]
+[ext_resource type="Script" path="res://scripts/data/spawn_group.gd" id="3_group"]
+[ext_resource type="Resource" path="res://data/themes/haunted.tres" id="4_theme"]
+[ext_resource type="Resource" path="res://data/lighting/haunted_night.tres" id="5_lighting"]
+[ext_resource type="Texture2D" path="res://assets/ui/level_02_preview.png" id="6_preview"]
+[ext_resource type="Resource" path="res://data/enemies/gargoyle.tres" id="10_gargoyle"]
+[ext_resource type="Resource" path="res://data/enemies/ghost_knight.tres" id="11_ghost_knight"]
+[ext_resource type="Resource" path="res://data/enemies/golem.tres" id="12_golem"]
+[ext_resource type="Resource" path="res://data/enemies/skeleton.tres" id="13_skeleton"]
+[ext_resource type="Resource" path="res://data/enemies/troll.tres" id="14_troll"]
+[ext_resource type="Resource" path="res://data/enemies/witch.tres" id="15_witch"]
+[ext_resource type="Resource" path="res://data/enemies/zombie.tres" id="16_zombie"]
+
+[sub_resource type="Resource" id="Resource_w1g1"]
+script = ExtResource("3_group")
+enemy = ExtResource("13_skeleton")
+count = 8
+interval = 1.0
+
+[sub_resource type="Resource" id="Resource_wave1"]
+script = ExtResource("2_wave")
+groups = Array[ExtResource("3_group")]([SubResource("Resource_w1g1")])
+bonus = 20
+
+[sub_resource type="Resource" id="Resource_w2g1"]
+script = ExtResource("3_group")
+enemy = ExtResource("13_skeleton")
+count = 10
+interval = 0.8
+
+[sub_resource type="Resource" id="Resource_w2g2"]
+script = ExtResource("3_group")
+enemy = ExtResource("16_zombie")
+count = 2
+interval = 2.5
+delay = 6.0
+
+[sub_resource type="Resource" id="Resource_wave2"]
+script = ExtResource("2_wave")
+groups = Array[ExtResource("3_group")]([SubResource("Resource_w2g1"), SubResource("Resource_w2g2")])
+bonus = 25
+
+[sub_resource type="Resource" id="Resource_w3g1"]
+script = ExtResource("3_group")
+enemy = ExtResource("16_zombie")
+count = 4
+interval = 2.0
+
+[sub_resource type="Resource" id="Resource_w3g2"]
+script = ExtResource("3_group")
+enemy = ExtResource("13_skeleton")
+count = 8
+interval = 0.7
+delay = 4.0
+
+[sub_resource type="Resource" id="Resource_wave3"]
+script = ExtResource("2_wave")
+groups = Array[ExtResource("3_group")]([SubResource("Resource_w3g1"), SubResource("Resource_w3g2")])
+bonus = 30
+
+[sub_resource type="Resource" id="Resource_w4g1"]
+script = ExtResource("3_group")
+enemy = ExtResource("10_gargoyle")
+count = 3
+interval = 2.2
+
+[sub_resource type="Resource" id="Resource_w4g2"]
+script = ExtResource("3_group")
+enemy = ExtResource("13_skeleton")
+count = 10
+interval = 0.6
+delay = 3.0
+
+[sub_resource type="Resource" id="Resource_wave4"]
+script = ExtResource("2_wave")
+groups = Array[ExtResource("3_group")]([SubResource("Resource_w4g1"), SubResource("Resource_w4g2")])
+bonus = 35
+
+[sub_resource type="Resource" id="Resource_w5g1"]
+script = ExtResource("3_group")
+enemy = ExtResource("13_skeleton")
+count = 16
+interval = 0.5
+
+[sub_resource type="Resource" id="Resource_w5g2"]
+script = ExtResource("3_group")
+enemy = ExtResource("16_zombie")
+count = 5
+interval = 1.8
+delay = 3.0
+
+[sub_resource type="Resource" id="Resource_w5g3"]
+script = ExtResource("3_group")
+enemy = ExtResource("15_witch")
+count = 1
+interval = 5.0
+delay = 6.0
+
+[sub_resource type="Resource" id="Resource_wave5"]
+script = ExtResource("2_wave")
+groups = Array[ExtResource("3_group")]([SubResource("Resource_w5g1"), SubResource("Resource_w5g2"), SubResource("Resource_w5g3")])
+bonus = 40
+
+[sub_resource type="Resource" id="Resource_w6g1"]
+script = ExtResource("3_group")
+enemy = ExtResource("10_gargoyle")
+count = 6
+interval = 1.4
+
+[sub_resource type="Resource" id="Resource_w6g2"]
+script = ExtResource("3_group")
+enemy = ExtResource("16_zombie")
+count = 6
+interval = 1.6
+delay = 4.0
+
+[sub_resource type="Resource" id="Resource_w6g3"]
+script = ExtResource("3_group")
+enemy = ExtResource("15_witch")
+count = 1
+interval = 6.0
+delay = 6.0
+
+[sub_resource type="Resource" id="Resource_wave6"]
+script = ExtResource("2_wave")
+groups = Array[ExtResource("3_group")]([SubResource("Resource_w6g1"), SubResource("Resource_w6g2"), SubResource("Resource_w6g3")])
+bonus = 45
+
+[sub_resource type="Resource" id="Resource_w7g1"]
+script = ExtResource("3_group")
+enemy = ExtResource("11_ghost_knight")
+count = 1
+interval = 1.0
+delay = 6.0
+
+[sub_resource type="Resource" id="Resource_w7g2"]
+script = ExtResource("3_group")
+enemy = ExtResource("16_zombie")
+count = 6
+interval = 1.6
+
+[sub_resource type="Resource" id="Resource_w7g3"]
+script = ExtResource("3_group")
+enemy = ExtResource("15_witch")
+count = 1
+interval = 6.0
+delay = 4.0
+
+[sub_resource type="Resource" id="Resource_wave7"]
+script = ExtResource("2_wave")
+groups = Array[ExtResource("3_group")]([SubResource("Resource_w7g1"), SubResource("Resource_w7g2"), SubResource("Resource_w7g3")])
+bonus = 60
+
+[sub_resource type="Resource" id="Resource_w8g1"]
+script = ExtResource("3_group")
+enemy = ExtResource("13_skeleton")
+count = 18
+interval = 0.5
+
+[sub_resource type="Resource" id="Resource_w8g2"]
+script = ExtResource("3_group")
+enemy = ExtResource("16_zombie")
+count = 5
+interval = 1.8
+delay = 3.0
+
+[sub_resource type="Resource" id="Resource_w8g3"]
+script = ExtResource("3_group")
+enemy = ExtResource("15_witch")
+count = 1
+interval = 5.0
+delay = 6.0
+
+[sub_resource type="Resource" id="Resource_wave8"]
+script = ExtResource("2_wave")
+groups = Array[ExtResource("3_group")]([SubResource("Resource_w8g1"), SubResource("Resource_w8g2"), SubResource("Resource_w8g3")])
+bonus = 75
+
+[sub_resource type="Resource" id="Resource_w9g1"]
+script = ExtResource("3_group")
+enemy = ExtResource("14_troll")
+count = 2
+interval = 4.0
+
+[sub_resource type="Resource" id="Resource_w9g2"]
+script = ExtResource("3_group")
+enemy = ExtResource("13_skeleton")
+count = 16
+interval = 0.45
+delay = 2.0
+
+[sub_resource type="Resource" id="Resource_w9g3"]
+script = ExtResource("3_group")
+enemy = ExtResource("16_zombie")
+count = 4
+interval = 2.0
+delay = 6.0
+
+[sub_resource type="Resource" id="Resource_w9g4"]
+script = ExtResource("3_group")
+enemy = ExtResource("15_witch")
+count = 2
+interval = 5.0
+delay = 5.0
+
+[sub_resource type="Resource" id="Resource_wave9"]
+script = ExtResource("2_wave")
+groups = Array[ExtResource("3_group")]([SubResource("Resource_w9g1"), SubResource("Resource_w9g2"), SubResource("Resource_w9g3"), SubResource("Resource_w9g4")])
+bonus = 80
+
+[sub_resource type="Resource" id="Resource_w10g1"]
+script = ExtResource("3_group")
+enemy = ExtResource("16_zombie")
+count = 10
+interval = 1.2
+
+[sub_resource type="Resource" id="Resource_w10g2"]
+script = ExtResource("3_group")
+enemy = ExtResource("10_gargoyle")
+count = 6
+interval = 1.5
+delay = 5.0
+
+[sub_resource type="Resource" id="Resource_w10g3"]
+script = ExtResource("3_group")
+enemy = ExtResource("15_witch")
+count = 2
+interval = 5.0
+delay = 3.0
+
+[sub_resource type="Resource" id="Resource_wave10"]
+script = ExtResource("2_wave")
+groups = Array[ExtResource("3_group")]([SubResource("Resource_w10g1"), SubResource("Resource_w10g2"), SubResource("Resource_w10g3")])
+bonus = 85
+
+[sub_resource type="Resource" id="Resource_w11g1"]
+script = ExtResource("3_group")
+enemy = ExtResource("11_ghost_knight")
+count = 2
+interval = 8.0
+delay = 4.0
+
+[sub_resource type="Resource" id="Resource_w11g2"]
+script = ExtResource("3_group")
+enemy = ExtResource("13_skeleton")
+count = 14
+interval = 0.5
+
+[sub_resource type="Resource" id="Resource_w11g3"]
+script = ExtResource("3_group")
+enemy = ExtResource("15_witch")
+count = 2
+interval = 5.0
+delay = 6.0
+
+[sub_resource type="Resource" id="Resource_wave11"]
+script = ExtResource("2_wave")
+groups = Array[ExtResource("3_group")]([SubResource("Resource_w11g1"), SubResource("Resource_w11g2"), SubResource("Resource_w11g3")])
+bonus = 90
+
+[sub_resource type="Resource" id="Resource_w12g1"]
+script = ExtResource("3_group")
+enemy = ExtResource("12_golem")
+count = 1
+interval = 1.0
+delay = 6.0
+
+[sub_resource type="Resource" id="Resource_w12g2"]
+script = ExtResource("3_group")
+enemy = ExtResource("16_zombie")
+count = 10
+interval = 1.2
+
+[sub_resource type="Resource" id="Resource_w12g3"]
+script = ExtResource("3_group")
+enemy = ExtResource("15_witch")
+count = 3
+interval = 5.0
+delay = 4.0
+
+[sub_resource type="Resource" id="Resource_w12g4"]
+script = ExtResource("3_group")
+enemy = ExtResource("11_ghost_knight")
+count = 1
+interval = 1.0
+delay = 16.0
+
+[sub_resource type="Resource" id="Resource_w12g5"]
+script = ExtResource("3_group")
+enemy = ExtResource("10_gargoyle")
+count = 6
+interval = 1.6
+delay = 10.0
+
+[sub_resource type="Resource" id="Resource_wave12"]
+script = ExtResource("2_wave")
+groups = Array[ExtResource("3_group")]([SubResource("Resource_w12g1"), SubResource("Resource_w12g2"), SubResource("Resource_w12g3"), SubResource("Resource_w12g4"), SubResource("Resource_w12g5")])
+bonus = 0
+
+[resource]
+script = ExtResource("1_level")
+id = &"haunted_forest"
+display_name = "Жуткий лес"
+description = "Ночной лес, древние руины и старое кладбище. Мертвецы идут из портала на западе, а после рыцаря-призрака открывается второй — на востоке. В финале — каменный голем."
+preview = ExtResource("6_preview")
+layout = PackedStringArray("TTTTTTTTTTTTTTTTTTTTTTTT", "T......T.TTTTTT.TT.....T", "TS###.P..R.t.r..t..###sT", "T.TP#...t..Rt.tP.t.#...T", "T...#P.GGGG..R..####Pr.T", "T.r.#..GGGGr.tR.#.t#..TT", "T...#########...#P.#GGTT", "T.P.#..GGGG.#P.t#.R#GG.T", "T...#.PGGGGP#.R.#t.#.R.T", "TT..#..R..t.#t.r####.TTT", "T.R.#tr.P..t#.P..RP#T.TT", "T...#########.tr...#.P.T", "TT.T.P.rTTP.########..rT", "TTTT..T.TT.CCC.P.r.TTTTT", "TTTTTTTTTTTCCCTTTTTTTTTT")
+music = &"battle_haunted"
+map_theme = ExtResource("4_theme")
+lighting = ExtResource("5_lighting")
+hud_style = &"haunted"
+start_gold = 350
+lives = 20
+hp_growth = 0.05
+hp_growth_power = 1.25
+sealed_portal_wave = 7
+decor_seed = 13
+waves = Array[ExtResource("2_wave")]([SubResource("Resource_wave1"), SubResource("Resource_wave2"), SubResource("Resource_wave3"), SubResource("Resource_wave4"), SubResource("Resource_wave5"), SubResource("Resource_wave6"), SubResource("Resource_wave7"), SubResource("Resource_wave8"), SubResource("Resource_wave9"), SubResource("Resource_wave10"), SubResource("Resource_wave11"), SubResource("Resource_wave12")])
