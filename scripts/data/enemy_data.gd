@@ -26,3 +26,19 @@ extends Resource
 @export var summon: EnemyData
 @export var summon_count := 0
 @export var summon_interval := 8.0
+
+@export_group("Healer")
+## Share of a wounded ally's max HP restored per cast (0 = not a healer). The healer never heals itself.
+@export_range(0.0, 1.0) var heal_fraction := 0.0
+## Allies within this many metres are healed.
+@export var heal_radius := 5.0
+## Seconds between casts; the healer only casts when someone nearby is wounded.
+@export var heal_interval := 6.0
+
+@export_group("Ground slam")
+## Seconds towers within `slam_radius` are stunned by the slam (0 = no slam).
+@export var slam_stun := 0.0
+## Towers within this many metres (horizontally) are stunned.
+@export var slam_radius := 6.5
+## Seconds between slams; the enemy only slams when a tower is in reach.
+@export var slam_interval := 10.0

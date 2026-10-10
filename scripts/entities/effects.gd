@@ -42,6 +42,12 @@ const PRESETS := {
 	&"debris": {amount = 12, lifetime = 1.2, colors = [Color(0.6, 0.57, 0.52), Color(0.5, 0.47, 0.42)],
 			speed = [3.0, 6.0], dir = Vector3.UP, spread = 60.0, gravity = Vector3(0, -12.0, 0), damping = 0.2,
 			size = [0.6, 1.2], curve = "none", radius = 0.3, mesh = "chunk"},
+	&"heal": {amount = 10, lifetime = 0.9, colors = [Color(0.3, 0.95, 0.65), Color(0.1, 0.5, 0.35, 0.0)],
+			speed = [0.6, 1.6], dir = Vector3.UP, spread = 30.0, gravity = Vector3(0, 1.5, 0), damping = 1.0,
+			size = [0.06, 0.13], curve = "pop", radius = 0.45, additive = true},
+	&"heal_aura": {amount = 24, lifetime = 1.2, colors = [Color(0.25, 0.8, 0.55), Color(0.08, 0.4, 0.28, 0.0)],
+			speed = [0.3, 0.9], dir = Vector3.UP, spread = 180.0, gravity = Vector3(0, 1.0, 0), damping = 1.0,
+			size = [0.06, 0.14], curve = "pop", radius = 0.8, additive = true, swirl = 5.0},
 	&"puff": {amount = 8, lifetime = 0.9, colors = [Color(0.85, 0.82, 0.78, 0.7), Color(0.7, 0.68, 0.65, 0.0)],
 			speed = [0.8, 2.0], dir = Vector3.FORWARD, spread = 35.0, gravity = Vector3(0, 0.6, 0), damping = 2.5,
 			size = [0.25, 0.5], curve = "grow", radius = 0.1},
@@ -52,6 +58,9 @@ const PRESETS := {
 	&"trail_frost": {amount = 30, lifetime = 0.35, colors = [Color(0.9, 1.4, 1.8), Color(0.4, 0.8, 1.2, 0.0)],
 			speed = [0.1, 0.3], dir = Vector3.UP, spread = 180.0, gravity = Vector3(0, -1.0, 0), damping = 0.0,
 			size = [0.07, 0.14], curve = "shrink", radius = 0.05, additive = true, trail = true},
+	&"stun": {amount = 16, lifetime = 0.8, colors = [Color(0.9, 0.6, 1.4), Color(0.4, 0.2, 0.8, 0.0)],
+			speed = [0.2, 0.5], dir = Vector3.UP, spread = 180.0, gravity = Vector3.ZERO, damping = 0.0,
+			size = [0.08, 0.15], curve = "pop", radius = 0.45, additive = true, swirl = 8.0, trail = true},
 	&"trail_smoke": {amount = 30, lifetime = 0.6, colors = [Color(0.45, 0.42, 0.4, 0.55), Color(0.5, 0.48, 0.45, 0.0)],
 			speed = [0.1, 0.3], dir = Vector3.UP, spread = 180.0, gravity = Vector3(0, 0.4, 0), damping = 0.0,
 			size = [0.12, 0.25], curve = "grow", radius = 0.04, trail = true},
@@ -60,6 +69,7 @@ const PRESETS := {
 static var _process_materials := {}
 static var _draw_meshes := {}
 static var _sphere: SphereMesh
+static var _torus: TorusMesh
 static var _label_font: Font = preload("res://assets/fonts/title_font.tres")
 
 
@@ -119,6 +129,33 @@ static func impact(parent: Node, at: Vector3, color: Color, radius: float) -> vo
 			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tween.tween_property(material, "albedo_color:a", 0.0, 0.3)
 	tween.chain().tween_callback(flash.queue_free)
+
+
+## A flat glowing ring that expands along the ground to `radius` and fades (area spells: healing).
+static func ring(parent: Node, at: Vector3, color: Color, radius: float, duration := 0.7) -> void:
+	if _torus == null:
+		_torus = TorusMesh.new()
+		_torus.inner_radius = 0.92
+		_torus.outer_radius = 1.0
+		_torus.rings = 48
+		_torus.ring_segments = 4
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.albedo_color = Color(color.r * 1.6, color.g * 1.6, color.b * 1.6, 0.8)  # >1 feeds the glow
+	var mesh := MeshInstance3D.new()
+	mesh.mesh = _torus
+	mesh.material_override = material
+	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(mesh)
+	mesh.global_position = at
+	mesh.scale = Vector3(0.3, 1.0, 0.3)
+	var tween := mesh.create_tween().set_parallel()
+	tween.tween_property(mesh, "scale", Vector3(radius, 1.0, radius), duration) \
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(material, "albedo_color:a", 0.0, duration) \
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.chain().tween_callback(mesh.queue_free)
 
 
 ## Text rising from a point and fading out (gold rewards).

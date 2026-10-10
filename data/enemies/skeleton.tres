@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://models/enemies/skeleton.glb" id="2_model"]
+[ext_resource type="Texture2D" path="res://assets/ui/icons/skeleton.png" id="3_icon"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"skeleton"
+display_name = "Скелет"
+icon = ExtResource("3_icon")
+model = ExtResource("2_model")
+max_hp = 55.0
+speed = 2.5
+anim_speed = 1.0
+reward = 6
+damage = 1
+flying = false
+is_boss = false
+hp_bar_height = 1.55
+aim_height = 0.7

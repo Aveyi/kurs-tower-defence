@@ -184,6 +184,27 @@ def summon():
     return s.reverb(s.mix((choir, 0.7), (swell, 0.4)), rt60=2.4, wet=0.4)
 
 
+def heal():
+    """Witch's healing spell: a soft rising chime over a warm chord, with a glassy shimmer."""
+    d = 1.1
+    notes = [s.midi(m) for m in (67, 74, 79, 83, 86)]
+    arp = s.mix(*[(s.bell(f, 1.0, 0.5), 0.55, i * 0.09) for i, f in enumerate(notes)])
+    pad = sum(s.sine(s.midi(m), d) for m in (55, 62, 67, 71)) / 4
+    pad *= (1 + 0.15 * s.sine(5.5, d)) * s.env_points(d, [(0, 0), (0.3, 1), (0.7, 0.7), (d, 0)])
+    shimmer = s.whoosh(0.9, 2500, 7000) * s.env_points(0.9, [(0, 0), (0.45, 1), (0.9, 0)])
+    return s.reverb(s.mix((arp, 0.8), (pad, 0.4), (shimmer, 0.12, 0.1)), rt60=1.8, wet=0.35)
+
+
+def slam():
+    """Golem's ground slam: a deep boom, rumbling earth and pattering rubble."""
+    d = 1.4
+    boom = s.drum(f0=90, f1=30, d=d, tau=0.35, click=0.9)
+    rumble = s.band(s.noise(d), hi=220) * s.env_points(d, [(0, 0), (0.03, 1), (0.5, 0.45), (d, 0)])
+    clacks = s.mix(*[(s.band(s.noise(0.06), lo=900, hi=4000) * s.env_exp(0.06, 0.012), s._rng.uniform(0.2, 0.5),
+                      0.15 + i * 0.07 + s._rng.uniform(0, 0.04)) for i in range(8)])
+    return s.reverb(s.mix((boom, 1.0), (rumble, 0.6), (clacks, 0.35)), rt60=1.4, wet=0.25)
+
+
 SFX = dict(  # name: (recipe, peak)
     arrow_hit=(arrow_hit, 0.35), cannon_shoot=(cannon_shoot, 0.8), explosion=(explosion, 0.85),
     magic_shoot=(magic_shoot, 0.22), magic_hit=(magic_hit, 0.25),
@@ -192,7 +213,7 @@ SFX = dict(  # name: (recipe, peak)
     upgrade=(upgrade, 0.6), sell=(sell, 0.55), error=(error, 0.4), ui_click=(ui_click, 0.35),
     ui_hover=(ui_hover, 0.12), castle_hit=(castle_hit, 0.9), wave_horn=(wave_horn, 0.75),
     wave_clear=(wave_clear, 0.6), victory=(victory, 0.85), defeat=(defeat, 0.85),
-    portal_spawn=(portal_spawn, 0.35), summon=(summon, 0.7),
+    portal_spawn=(portal_spawn, 0.35), summon=(summon, 0.7), heal=(heal, 0.4), slam=(slam, 0.9),
 )
 
 

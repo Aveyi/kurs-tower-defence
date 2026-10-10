@@ -26,6 +26,9 @@ var _cooldown := 0.0
 var _target: Enemy
 var _reveal_tween: Tween
 var _flags: WindFlags
+var _stun_left := 0.0
+var _stun_tween: Tween
+var _stun_sparks: GPUParticles3D
 
 
 func setup(tower_data: TowerData, at_cell: Vector2i, projectile_parent: Node) -> void:
@@ -36,6 +39,7 @@ func setup(tower_data: TowerData, at_cell: Vector2i, projectile_parent: Node) ->
 
 
 func _ready() -> void:
+	add_to_group(&"towers")
 	_load_model()
 
 
@@ -77,6 +81,9 @@ func _load_model() -> void:
 	_anim.play(&"Idle")
 	_apply_yaw()
 	_play_reveal()
+	if _stun_left > 0.0:  # upgraded while stunned
+		_anim.speed_scale = 0.0
+		FantasyMaterials.set_fx(_model, &"fx_stun", 1.0)
 
 
 ## The tower materialises from the ground up behind a rising band of golden runes.
@@ -99,7 +106,42 @@ func _process(_delta: float) -> void:
 		_flags.update()
 
 
+## Stunned by a ground slam: stops shooting and freezes for `duration` seconds.
+func stun(duration: float) -> void:
+	var already := _stun_left > 0.0
+	_stun_left = maxf(_stun_left, duration)
+	if already:
+		return
+	_anim.speed_scale = 0.0
+	_tween_stun(1.0)
+	_stun_sparks = Effects.trail(self, &"stun")
+	_stun_sparks.position = Vector3.UP * (FantasyMaterials.top_of(_model) - global_position.y + 0.2)
+
+
+func is_stunned() -> bool:
+	return _stun_left > 0.0
+
+
+func _end_stun() -> void:
+	_anim.speed_scale = 1.0
+	_tween_stun(0.0)
+	Effects.release_trail(_stun_sparks, get_parent())
+	_stun_sparks = null
+
+
+func _tween_stun(target: float) -> void:
+	if _stun_tween:
+		_stun_tween.kill()
+	_stun_tween = create_tween()
+	FantasyMaterials.tween_fx(_stun_tween, _model, &"fx_stun", 1.0 - target, target, 0.2)
+
+
 func _physics_process(delta: float) -> void:
+	if _stun_left > 0.0:
+		_stun_left -= delta
+		if _stun_left <= 0.0:
+			_end_stun()
+		return
 	_cooldown -= delta
 	# a sniper re-picks the strongest enemy before every shot
 	if not _is_valid(_target) or (data.priority == TowerData.Priority.STRONGEST and _cooldown <= 0.0):

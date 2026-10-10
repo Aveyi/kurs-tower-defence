@@ -6,10 +6,25 @@ signal died(enemy: Enemy)
 signal reached_end(enemy: Enemy)
 ## A summoner boss finished its cast; WaveSpawner spawns the minions.
 signal summon_requested(enemy: Enemy)
+## A golem's fists hit the ground (the camera shakes).
+signal slammed(enemy: Enemy)
+
+enum Cast { SUMMON, HEAL, SLAM }
 
 const HEALTH_BAR_SHADER := preload("res://shaders/health_bar.gdshader")
 const CAST_TIME := 1.4
-const CAST_SUMMON_AT := 0.8
+## Cast time left when the spell takes effect (minions appear / allies get healed).
+const CAST_EFFECT_AT := 0.8
+## A healer / slammer re-checks for targets this often while there are none.
+const ABILITY_RETRY := 0.5
+## Time into the "Cast" animation when the fists hit the ground (frame 20 at 24 fps).
+const SLAM_HIT_TIME := 0.833
+const SLAM_COLOR := Color(0.7, 0.42, 1.0)
+## Allies above this share of their max HP are not worth a heal.
+const HEAL_BELOW := 0.95
+## Bosses get only this part of a heal, so a witch cannot keep a boss alive on her own.
+const BOSS_HEAL_SCALE := 0.25
+const HEAL_COLOR := Color(0.36, 1.0, 0.69)
 
 static var _bar_material: ShaderMaterial
 
@@ -37,7 +52,11 @@ var _slow := 1.0
 var _slow_left := 0.0
 var _hit_cooldown := 0.0
 var _summon_left := 0.0
+var _heal_left := 0.0
+var _slam_left := 0.0
 var _cast_left := 0.0
+var _cast_effect_at := 0.0
+var _cast_kind := Cast.SUMMON
 
 
 func setup(enemy_data: EnemyData, path: Curve3D, hp_multiplier: float, start := 0.0, lane_offset := 0.0) -> void:
@@ -49,6 +68,8 @@ func setup(enemy_data: EnemyData, path: Curve3D, hp_multiplier: float, start := 
 	progress = start
 	lane = lane_offset
 	_summon_left = data.summon_interval
+	_heal_left = data.heal_interval * 0.5
+	_slam_left = data.slam_interval * 0.6
 
 
 func _ready() -> void:
@@ -83,7 +104,21 @@ func _physics_process(delta: float) -> void:
 	if data.summon and data.summon_count > 0:
 		_summon_left -= delta
 		if _summon_left <= 0.0:
-			_start_cast()
+			_start_cast(Cast.SUMMON)
+	if data.heal_fraction > 0.0:
+		_heal_left -= delta
+		if _heal_left <= 0.0:
+			if _wounded_allies().is_empty():
+				_heal_left = ABILITY_RETRY
+			else:
+				_start_cast(Cast.HEAL)
+	if data.slam_stun > 0.0 and _cast_left <= 0.0:
+		_slam_left -= delta
+		if _slam_left <= 0.0:
+			if _towers_in_reach().is_empty():
+				_slam_left = ABILITY_RETRY
+			else:
+				_start_cast(Cast.SLAM)
 	progress += data.speed * _slow * delta
 	if progress >= _length:
 		alive = false
@@ -134,6 +169,16 @@ func take_damage(amount: float) -> void:
 		_anim.queue(_move_anim)
 
 
+## Restores health (a witch's spell).
+func heal(amount: float) -> void:
+	if not alive:
+		return
+	hp = minf(hp + amount, max_hp)
+	_bar.set_instance_shader_parameter(&"ratio", clampf(hp / max_hp, 0.0, 1.0))
+	Effects.burst(get_parent(), &"heal", global_position + Vector3.UP * data.aim_height,
+			1.6 if data.is_boss else 1.0)
+
+
 func apply_slow(factor: float, duration: float) -> void:
 	if not alive:
 		return
@@ -182,21 +227,84 @@ func _die() -> void:
 	tween.tween_callback(queue_free)
 
 
-func _start_cast() -> void:
+## Stops to cast: summon minions, heal wounded allies or slam the ground to stun towers.
+func _start_cast(kind: Cast) -> void:
+	_cast_kind = kind
 	_cast_left = CAST_TIME
-	_summon_left = data.summon_interval
+	_cast_effect_at = CAST_EFFECT_AT
 	_play(&"Cast" if _anim.has_animation(&"Cast") else &"Hit")
-	Audio.play(&"summon")
-	Effects.burst(get_parent(), &"portal", global_position + Vector3.UP * 1.2, 1.3)
+	match kind:
+		Cast.SUMMON:
+			_summon_left = data.summon_interval
+			Audio.play(&"summon")
+			Effects.burst(get_parent(), &"portal", global_position + Vector3.UP * 1.2, 1.3)
+		Cast.HEAL:
+			_heal_left = data.heal_interval
+			Effects.burst(get_parent(), &"heal_aura", global_position + Vector3.UP * 1.0)
+		Cast.SLAM:
+			# the whole swing plays out; the stun lands when the fists hit the ground
+			_slam_left = data.slam_interval
+			var speed := maxf(_anim.speed_scale, 0.1)
+			var length := _anim.get_animation(&"Cast").length
+			_cast_left = length / speed
+			_cast_effect_at = (length - SLAM_HIT_TIME) / speed
 
 
 func _update_cast(delta: float) -> void:
 	var before := _cast_left
 	_cast_left -= delta
-	if before > CAST_SUMMON_AT and _cast_left <= CAST_SUMMON_AT:
-		summon_requested.emit(self)
+	if before > _cast_effect_at and _cast_left <= _cast_effect_at:
+		match _cast_kind:
+			Cast.SUMMON:
+				summon_requested.emit(self)
+			Cast.HEAL:
+				_heal_allies()
+			Cast.SLAM:
+				_slam()
 	if _cast_left <= 0.0:
 		_play(_move_anim)
+
+
+func _heal_allies() -> void:
+	Audio.play(&"heal", -2.0)
+	Effects.ring(get_parent(), global_position + Vector3.UP * 0.1, HEAL_COLOR, data.heal_radius)
+	for ally in _wounded_allies():
+		ally.heal(ally.max_hp * data.heal_fraction * (BOSS_HEAL_SCALE if ally.data.is_boss else 1.0))
+
+
+func _slam() -> void:
+	var world := get_parent()
+	var feet := global_position + Vector3.UP * 0.1
+	Audio.play(&"slam")
+	Effects.ring(world, feet, SLAM_COLOR, data.slam_radius, 0.5)
+	Effects.burst(world, &"debris", feet + global_basis.z * 1.0, 1.4)
+	Effects.burst(world, &"dust", feet, 2.5)
+	slammed.emit(self)
+	for tower in _towers_in_reach():
+		tower.stun(data.slam_stun)
+
+
+## Towers within the slam radius (horizontal distance).
+func _towers_in_reach() -> Array[Tower]:
+	var towers: Array[Tower] = []
+	for node in get_tree().get_nodes_in_group(&"towers"):
+		var tower := node as Tower
+		var d := tower.global_position - global_position
+		if not tower.is_queued_for_deletion() and Vector2(d.x, d.z).length() <= data.slam_radius:
+			towers.append(tower)
+	return towers
+
+
+## Living enemies within the heal radius that have lost some health (never the healer itself).
+func _wounded_allies() -> Array[Enemy]:
+	var wounded: Array[Enemy] = []
+	var radius_sq := data.heal_radius * data.heal_radius
+	for node in get_tree().get_nodes_in_group(&"enemies"):
+		var ally := node as Enemy
+		if ally != self and ally.alive and ally.hp < ally.max_hp * HEAL_BELOW \
+				and ally.global_position.distance_squared_to(global_position) <= radius_sq:
+			wounded.append(ally)
+	return wounded
 
 
 func _play(anim: StringName) -> void:

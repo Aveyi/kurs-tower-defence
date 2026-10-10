@@ -133,6 +133,7 @@ func _spend(amount: int) -> void:
 func _on_enemy_spawned(enemy: Enemy) -> void:
 	enemy.died.connect(_on_enemy_died)
 	enemy.reached_end.connect(_on_enemy_reached_end)
+	enemy.slammed.connect(func(_e: Enemy) -> void: camera_rig.shake(0.35))
 
 
 func _on_enemy_died(enemy: Enemy) -> void:

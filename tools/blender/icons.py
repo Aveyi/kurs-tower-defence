@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lowpoly  # noqa: E402
 import mobs  # noqa: E402
 import towers  # noqa: E402
+import undead  # noqa: E402
 from lowpoly import Model  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -68,6 +69,8 @@ ITEMS = dict(
     ballista=(towers.TOWERS["ballista_2"], "Idle"),
     goblin=(mobs.goblin, "Walk"), orc=(mobs.orc, "Walk"), troll=(mobs.troll, "Walk"), wyvern=(mobs.wyvern, "Fly"),
     necromancer=(mobs.necromancer, "Walk"), skeleton_knight=(mobs.skeleton_knight, "Walk"),
+    skeleton=(undead.skeleton, "Walk"), zombie=(undead.zombie, "Walk"), witch=(undead.witch, "Walk"),
+    gargoyle=(undead.gargoyle, "Fly"), golem=(undead.golem, "Walk"),
     coin=(coin, None), heart=(heart, None), wave=(swords, None),
 )
 

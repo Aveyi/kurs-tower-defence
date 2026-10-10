@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://models/enemies/golem.glb" id="2_model"]
+[ext_resource type="Texture2D" path="res://assets/ui/icons/golem.png" id="3_icon"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"golem"
+display_name = "Каменный голем"
+icon = ExtResource("3_icon")
+model = ExtResource("2_model")
+max_hp = 3200.0
+speed = 0.7
+anim_speed = 0.85
+reward = 220
+damage = 15
+flying = false
+is_boss = true
+hp_bar_height = 3.8
+aim_height = 1.9
+slam_stun = 2.5
+slam_radius = 6.5
+slam_interval = 10.0
