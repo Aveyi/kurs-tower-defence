@@ -44,10 +44,7 @@ func _ready() -> void:
 	%MenuButton.pressed.connect(func() -> void: game.to_menu())
 	%EndRestartButton.pressed.connect(func() -> void: game.restart())
 	%EndMenuButton.pressed.connect(func() -> void: game.to_menu())
-	for bus in [&"Music", &"SFX"]:
-		var slider: HSlider = get_node("%%%sSlider" % bus)
-		slider.value = Audio.get_volume(bus)
-		slider.value_changed.connect(func(v: float) -> void: Audio.set_volume(bus, v))
+	%SettingsButton.pressed.connect(_open_settings)
 
 
 func setup(owner_game: Game) -> void:
@@ -73,6 +70,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if game == null or game.over:
 		return
 	if event.is_action_pressed(&"pause"):
+		if pause_menu.visible == false and get_tree().paused:
+			return  # the settings screen handles Esc itself
 		if not get_tree().paused and game.build.selected_cell != BuildController.NONE:
 			game.build.clear()
 		else:
@@ -119,6 +118,13 @@ func _on_countdown_changed(seconds: float) -> void:
 func _toggle_speed() -> void:
 	game.set_fast(not game.fast)
 	speed_button.text = "Скорость ×2" if game.fast else "Скорость ×1"
+
+
+func _open_settings() -> void:
+	var menu := SettingsMenu.new()
+	pause_menu.hide()
+	menu.closed.connect(func() -> void: pause_menu.show())
+	$Root.add_child(menu)
 
 
 func _toggle_pause() -> void:

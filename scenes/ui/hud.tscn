@@ -274,45 +274,17 @@ theme_override_font_sizes/font_size = 40
 text = "Пауза"
 horizontal_alignment = 1
 
-[node name="Volume" type="GridContainer" parent="Root/PauseMenu/Center/Panel/VBox"]
-layout_mode = 2
-theme_override_constants/h_separation = 16
-theme_override_constants/v_separation = 10
-columns = 2
-
-[node name="MusicLabel" type="Label" parent="Root/PauseMenu/Center/Panel/VBox/Volume"]
-layout_mode = 2
-text = "Музыка"
-
-[node name="MusicSlider" type="HSlider" parent="Root/PauseMenu/Center/Panel/VBox/Volume"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(240, 32)
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 4
-max_value = 1.0
-step = 0.05
-value = 1.0
-
-[node name="SfxLabel" type="Label" parent="Root/PauseMenu/Center/Panel/VBox/Volume"]
-layout_mode = 2
-text = "Звуки"
-
-[node name="SFXSlider" type="HSlider" parent="Root/PauseMenu/Center/Panel/VBox/Volume"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(240, 32)
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 4
-max_value = 1.0
-step = 0.05
-value = 1.0
-
 [node name="ResumeButton" type="Button" parent="Root/PauseMenu/Center/Panel/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 text = "Продолжить"
+
+[node name="SettingsButton" type="Button" parent="Root/PauseMenu/Center/Panel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+text = "Настройки"
 
 [node name="RestartButton" type="Button" parent="Root/PauseMenu/Center/Panel/VBox"]
 unique_name_in_owner = true

@@ -1,7 +1,7 @@
 class_name Map
 extends Node3D
 ## Builds the level from LevelData.layout:
-## - tiles in a GridMap, road and river tiles auto-picked and rotated from their neighbours;
+## - tiles, road and river ones auto-picked and rotated from their neighbours;
 ## - the enemy portal, the castle and decorations;
 ## - one enemy route (Curve3D) for every way along the road network from the portal to the
 ##   castle gate; forks and rejoining branches are allowed.
@@ -18,6 +18,9 @@ const ROAD_TILES := {
 const RIVER_TILES := {"river_straight": [0, 2], "river_corner": [2, 1]}
 const TREES: Array[String] = ["pine_1", "pine_2", "oak_1", "pine_1", "pine_2", "oak_2"]
 const SMALL_PROPS: Array[String] = ["bush_1", "bush_2", "rock_1", "rock_2", "mushrooms", "stump"]
+## Tiles that cast shadows; flat ground only receives them (saves the shadow passes).
+const SHADOW_TILES: Array[String] = ["bridge"]
+const NO_SHADOW_PROPS: Array[String] = ["mushrooms"]
 const CASTLE_PROPS: Array[String] = ["crates", "well", "fence", "lamppost"]
 const VORTEX_SHADER := preload("res://shaders/portal_vortex.gdshader")
 ## Safety limit for route enumeration on badly designed maps (road grids explode combinatorially).
@@ -31,7 +34,8 @@ var portal: Node3D
 var castle: Node3D
 var castle_center := Vector3.ZERO
 
-var _grid: GridMap
+## Tiles and props are drawn in batches: one MultiMesh per model instead of hundreds of nodes.
+var _batches := {}  # model path -> [mesh, mesh offset, cast shadows, Array[Transform3D]]
 var _gate_column := -1
 var _portal_anim: AnimationPlayer
 var _castle_flags: WindFlags
@@ -41,11 +45,6 @@ var _last_portal_fx := -100000
 func build(level: LevelData) -> void:
 	layout = level.layout
 	size = Vector2i(layout[0].length(), layout.size())
-	_grid = GridMap.new()
-	_grid.mesh_library = TileLibrary.get_library()
-	_grid.cell_size = Vector3(CELL, 1.0, CELL)
-	_grid.cell_center_y = false
-	add_child(_grid)
 	var columns := _find("C").map(func(c: Vector2i) -> int: return c.x)
 	if not columns.is_empty():
 		_gate_column = (columns.min() + columns.max()) / 2
@@ -58,6 +57,7 @@ func build(level: LevelData) -> void:
 	_place_castle()
 	_build_routes()
 	_place_decor(rng)
+	_flush_batches()
 
 
 # --- queries -------------------------------------------------------------------------------
@@ -141,8 +141,8 @@ func _place_tile(cell: Vector2i, rng: RandomNumberGenerator) -> void:
 			turns = 0
 		"C":
 			tile = "grass_1"
-	var orientation := _grid.get_orthogonal_index_from_basis(Basis(Vector3.UP, turns * PI / 2.0))
-	_grid.set_cell_item(Vector3i(cell.x, 0, cell.y), TileLibrary.id_of(tile), orientation)
+	_batch("tile:" + tile, TileLibrary.tile(tile), tile in SHADOW_TILES,
+			Transform3D(Basis(Vector3.UP, turns * PI / 2.0), cell_center(cell)))
 
 
 ## Indices of the DIRS where `connects` is true for the neighbour.
@@ -315,8 +315,33 @@ func _near_castle(cell: Vector2i) -> bool:
 
 func _prop(prop: String, cell: Vector2i, rng: RandomNumberGenerator, spread := 0.55) -> void:
 	var offset := Vector3(rng.randf_range(-spread, spread), 0, rng.randf_range(-spread, spread))
-	_instance("res://models/props/%s.glb" % prop, cell_center(cell) + offset, rng.randf() * TAU,
-			rng.randf_range(0.85, 1.15))
+	var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * rng.randf_range(0.85, 1.15))
+	_batch("prop:" + prop, TileLibrary.prop(prop), not prop in NO_SHADOW_PROPS,
+			Transform3D(basis, cell_center(cell) + offset))
+
+
+func _batch(key: String, model: Array, cast_shadow: bool, at: Transform3D) -> void:
+	if not _batches.has(key):
+		_batches[key] = [model[0], model[1], cast_shadow, []]
+	_batches[key][3].append(at * model[1])
+
+
+func _flush_batches() -> void:
+	for key in _batches:
+		var batch: Array = _batches[key]
+		var multimesh := MultiMesh.new()
+		multimesh.transform_format = MultiMesh.TRANSFORM_3D
+		multimesh.mesh = batch[0]
+		multimesh.instance_count = batch[3].size()
+		for i in batch[3].size():
+			multimesh.set_instance_transform(i, batch[3][i])
+		var instance := MultiMeshInstance3D.new()
+		instance.name = key.replace(":", "_")
+		instance.multimesh = multimesh
+		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if batch[2] \
+				else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(instance)
+	_batches.clear()
 
 
 func _place_decor(rng: RandomNumberGenerator) -> void:

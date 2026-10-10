@@ -10,7 +10,11 @@ extends Resource
 ## Roads may fork and rejoin: enemies are spread over every route from the portal to the gate.
 ## Keep separate branches from touching each other sideways, or the tiles will join them.
 
+## Key for saved results.
+@export var id: StringName
 @export var display_name := ""
+@export_multiline var description := ""
+@export var preview: Texture2D
 @export var layout: PackedStringArray
 @export var start_gold := 220
 @export var lives := 20

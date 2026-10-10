@@ -5,7 +5,8 @@ extends Control
 func _ready() -> void:
 	get_tree().paused = false
 	Engine.time_scale = 1.0
-	%PlayButton.pressed.connect(func() -> void: get_tree().change_scene_to_file("res://scenes/game/game.tscn"))
+	%PlayButton.pressed.connect(func() -> void: get_tree().change_scene_to_file("res://scenes/ui/level_select.tscn"))
+	%SettingsButton.pressed.connect(func() -> void: add_child(SettingsMenu.new()))
 	%QuitButton.pressed.connect(func() -> void: get_tree().quit())
 	%PlayButton.grab_focus()
 	Audio.play_music(&"menu")

@@ -19,6 +19,8 @@ config/icon="res://icon.svg"
 [autoload]
 
 Audio="*res://scripts/autoload/audio.gd"
+Settings="*res://scripts/autoload/settings.gd"
+Session="*res://scripts/autoload/session.gd"
 
 [display]
 
@@ -95,4 +97,6 @@ zoom_out={
 
 [rendering]
 
-anti_aliasing/quality/msaa_3d=2
+textures/vram_compression/import_etc2_astc=true
+
+anti_aliasing/quality/screen_space_aa=2

@@ -36,6 +36,10 @@ var _towers := {}  # Vector2i -> Tower
 func _ready() -> void:
 	get_tree().paused = false
 	Engine.time_scale = 1.0
+	if Session.level:
+		level = Session.level
+	Settings.changed.connect(_apply_graphics)
+	_apply_graphics()
 	map.build(level)
 	gold = level.start_gold
 	lives = level.lives
@@ -58,6 +62,10 @@ func _process(delta: float) -> void:
 		countdown_changed.emit(_countdown)
 		if _countdown <= 0.0:
 			start_next_wave()
+
+
+func _apply_graphics() -> void:
+	Settings.apply_to_scene($WorldEnvironment.environment, $Sun, $CameraRig/Camera3D/Outline)
 
 
 func start_next_wave() -> void:
@@ -170,6 +178,7 @@ func _finish(victory: bool) -> void:
 	build.clear()
 	Audio.stop_music(1.0)
 	Audio.play(&"victory" if victory else &"defeat")
+	Session.record_result(level, victory, lives)
 	game_over.emit(victory)
 
 

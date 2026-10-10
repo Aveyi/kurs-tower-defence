@@ -30,6 +30,8 @@ func _shot(name: String) -> void:
 
 func _tick() -> void:
 	frame += 1
+	if frame == 1:
+		root.get_node("Session").record_results = false
 	if frame == 1:  # not in _init: autoloads are registered only after it returns
 		change_scene_to_file("res://scenes/game/game.tscn")
 	elif frame == 5:

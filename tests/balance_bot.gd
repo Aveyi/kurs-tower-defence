@@ -24,6 +24,8 @@ func _init() -> void:
 func _tick() -> void:
 	frame += 1
 	if frame == 1:
+		root.get_node("Session").record_results = false
+	if frame == 1:
 		var scene = load("res://scenes/game/game.tscn").instantiate()
 		var args := OS.get_cmdline_user_args()
 		if not args.is_empty():

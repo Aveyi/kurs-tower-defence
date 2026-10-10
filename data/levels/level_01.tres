@@ -1,6 +1,7 @@
 [gd_resource type="Resource" script_class="LevelData" format=3]
 
 [ext_resource type="Script" path="res://scripts/data/level_data.gd" id="1_level"]
+[ext_resource type="Texture2D" path="res://assets/ui/menu_bg.png" id="2_preview"]
 [ext_resource type="Script" path="res://scripts/data/wave_data.gd" id="2_wave"]
 [ext_resource type="Script" path="res://scripts/data/spawn_group.gd" id="3_group"]
 [ext_resource type="Resource" path="res://data/enemies/goblin.tres" id="10_goblin"]
@@ -206,7 +207,10 @@ bonus = 0
 
 [resource]
 script = ExtResource("1_level")
+id = &"valley_of_forks"
 display_name = "Долина развилок"
+description = "Зелёная долина, рассечённая рекой. Дорога от портала трижды разветвляется: враги идут восемью путями, а башни на развилках держат сразу несколько дорог."
+preview = ExtResource("2_preview")
 layout = PackedStringArray("TTTTTTTTTTTTTTT~TTTTTTTT", "TTT..######.###=##.....T", "T..P.#.P..#P#..~.#P.T..T", "TS####.TTP###PT~P#.T..TT", "T.r..#P...#.#.r~.#.....T", "T..r.#..P.#P#..~.#.r.T.T", "TT...#r...#.#P.~P#..T..T", "T...P#.P..#.#..~.#P...TT", "T....#....#P###=##..P..T", "T.T..######...P~.######T", "TT.T..P..P..Tr.~.#.P.P#T", "T..T....T...T.T~P#r...#T", "TTT..T.T.rT..T.~.######T", "T.r.T.r....Tr..~T.PCCC.T", "TTTTTTTTTTTTTTT~TTTCCCTT")
 start_gold = 250
 lives = 20
