@@ -3,7 +3,8 @@ extends Node3D
 ## Builds the level from LevelData.layout:
 ## - tiles in a GridMap, road and river tiles auto-picked and rotated from their neighbours;
 ## - the enemy portal, the castle and decorations;
-## - the enemy path (Curve3D) along the road, with arcs through the corner tiles.
+## - one enemy route (Curve3D) for every way along the road network from the portal to the
+##   castle gate; forks and rejoining branches are allowed.
 
 const CELL := 2.0
 ## Top of the tower plot platform; towers stand on it.
@@ -19,15 +20,19 @@ const TREES: Array[String] = ["pine_1", "pine_2", "oak_1", "pine_1", "pine_2", "
 const SMALL_PROPS: Array[String] = ["bush_1", "bush_2", "rock_1", "rock_2", "mushrooms", "stump"]
 const CASTLE_PROPS: Array[String] = ["crates", "well", "fence", "lamppost"]
 const VORTEX_SHADER := preload("res://shaders/portal_vortex.gdshader")
+## Safety limit for route enumeration on badly designed maps (road grids explode combinatorially).
+const MAX_ROUTES := 32
 
 var layout: PackedStringArray
 var size := Vector2i.ZERO
-var curve := Curve3D.new()
+## Enemy routes from the portal to the castle, shortest first.
+var routes: Array[Curve3D] = []
 var portal: Node3D
 var castle: Node3D
 var castle_center := Vector3.ZERO
 
 var _grid: GridMap
+var _gate_column := -1
 var _portal_anim: AnimationPlayer
 var _castle_flags: WindFlags
 var _last_portal_fx := -100000
@@ -41,6 +46,9 @@ func build(level: LevelData) -> void:
 	_grid.cell_size = Vector3(CELL, 1.0, CELL)
 	_grid.cell_center_y = false
 	add_child(_grid)
+	var columns := _find("C").map(func(c: Vector2i) -> int: return c.x)
+	if not columns.is_empty():
+		_gate_column = (columns.min() + columns.max()) / 2
 	var rng := RandomNumberGenerator.new()
 	rng.seed = level.decor_seed
 	for row in size.y:
@@ -48,7 +56,7 @@ func build(level: LevelData) -> void:
 			_place_tile(Vector2i(col, row), rng)
 	_place_portal()
 	_place_castle()
-	_build_path()
+	_build_routes()
 	_place_decor(rng)
 
 
@@ -69,6 +77,15 @@ func is_river(cell: Vector2i) -> bool:
 
 func is_plot(cell: Vector2i) -> bool:
 	return char_at(cell) == "P"
+
+
+## A castle cell in the gate (middle) column: the only place a road may enter the castle.
+func _is_gate(cell: Vector2i) -> bool:
+	return char_at(cell) == "C" and cell.x == _gate_column
+
+
+func _at_gate(cell: Vector2i) -> bool:
+	return DIRS.any(func(d: Vector2i) -> bool: return _is_gate(cell + d))
 
 
 func cell_center(cell: Vector2i) -> Vector3:
@@ -106,7 +123,7 @@ func _place_tile(cell: Vector2i, rng: RandomNumberGenerator) -> void:
 	var turns := rng.randi() % 4
 	match char_at(cell):
 		"#", "S":
-			var fit := _fit(_mask(cell, func(n: Vector2i) -> bool: return is_road(n) or char_at(n) == "C"), ROAD_TILES)
+			var fit := _fit(_mask(cell, func(n: Vector2i) -> bool: return is_road(n) or _is_gate(n)), ROAD_TILES)
 			tile = fit[0]
 			turns = fit[1]
 		"~":
@@ -213,37 +230,54 @@ func _place_castle() -> void:
 	var toward := Vector3.FORWARD
 	for c in cells:
 		for d in DIRS:
-			if is_road(c + d):
+			if _is_gate(c) and is_road(c + d):
 				toward = Vector3(d.x, 0, d.y)
 	castle = _instance("res://models/structures/castle.glb", castle_center, _yaw_toward(toward))
 	_castle_flags = WindFlags.new(castle)
 	_play_idle(castle)
 
 
-# --- path ----------------------------------------------------------------------------------
-## Walks the road from the portal to the castle; the road must not branch.
-func road_cells() -> Array[Vector2i]:
-	var cells: Array[Vector2i] = [_find("S")[0]]
-	var visited := {cells[0]: true}
-	while true:
-		var next := Vector2i(-1, -1)
-		for d in DIRS:
-			var n := cells[-1] + d
-			if is_road(n) and not visited.has(n):
-				next = n
-				break
-		if next.x < 0:
-			break
-		cells.append(next)
-		visited[next] = true
-	return cells
+# --- routes ------------------------------------------------------------------------------
+## Every simple road path from the portal to the castle gate (cell lists). Forks multiply the count:
+## two forks with two branches each give four routes.
+func route_cells() -> Array:
+	var start := _find("S")[0]
+	var found := []
+	_walk(start, {start: true}, [start], found)
+	found.sort_custom(func(a: Array, b: Array) -> bool: return a.size() < b.size())
+	return found
 
 
-func _build_path() -> void:
-	var cells := road_cells()
-	var centers := cells.map(cell_center)
-	curve.clear_points()
+func _walk(cell: Vector2i, seen: Dictionary, path: Array, found: Array) -> void:
+	if found.size() >= MAX_ROUTES:
+		return
+	if _at_gate(cell):
+		found.append(path.duplicate())
+		return
+	for d in DIRS:
+		var next := cell + d
+		if is_road(next) and not seen.has(next):
+			seen[next] = true
+			path.append(next)
+			_walk(next, seen, path, found)
+			path.pop_back()
+			seen.erase(next)
+
+
+func _build_routes() -> void:
+	routes.clear()
+	for cells in route_cells():
+		routes.append(_curve_through(cells))
+	if routes.is_empty():
+		push_error("Map: no road leads from the portal to the castle gate")
+
+
+## Smooth path through the given road cells: straight through the middle of the tiles, quarter
+## arcs through corners, then into the castle gate.
+func _curve_through(cells: Array) -> Curve3D:
+	var curve := Curve3D.new()
 	curve.bake_interval = 0.2
+	var centers := cells.map(cell_center)
 	curve.add_point(centers[0])
 	for i in range(1, cells.size()):
 		var entry: Vector3 = (centers[i - 1] + centers[i]) / 2.0
@@ -256,14 +290,11 @@ func _build_path() -> void:
 				var pivot: Vector3 = centers[i] + a + b
 				for t in [0.25, 0.5, 0.75]:
 					curve.add_point(pivot + (entry - pivot).slerp(exit - pivot, t))
-	# from the last road tile into the castle gate
 	var last: Vector3 = centers[-1]
-	var into := castle_center - last
-	if absf(into.x) > absf(into.z):
-		into = Vector3(signf(into.x), 0, 0)
-	else:
-		into = Vector3(0, 0, signf(into.z))
-	curve.add_point(last + into * (CELL / 2.0 + 0.4))
+	for d in DIRS:
+		if _is_gate(cells[-1] + d):
+			curve.add_point(last + Vector3(d.x, 0, d.y) * (CELL / 2.0 + 0.4))
+	return curve
 
 
 # --- decorations ---------------------------------------------------------------------------

@@ -9,7 +9,7 @@ extends Node3D
 
 @export var pan_speed := 16.0
 @export var min_distance := 4.5
-@export var max_distance := 40.0
+@export var max_distance := 52.0
 ## Camera pitch (degrees below the horizon) at the closest and the farthest zoom.
 @export var pitch_near := 30.0
 @export var pitch_far := 58.0

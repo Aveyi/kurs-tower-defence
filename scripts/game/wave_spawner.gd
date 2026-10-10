@@ -14,6 +14,7 @@ var wave_running := false
 
 var _enemies_parent: Node3D
 var _queue: Array = []  # [[time, EnemyData], ...] sorted by time
+var _route_bag: Array = []  # shuffled route indices still to hand out
 var _clock := 0.0
 
 
@@ -57,9 +58,14 @@ func _process(delta: float) -> void:
 		wave_cleared.emit(wave_index, level.waves[wave_index].bonus)
 
 
-func spawn(data: EnemyData, start := 0.0) -> Enemy:
+## Spawns an enemy at `start` metres along a route (-1: the next route from a shuffled bag, so
+## every branch of every fork gets its share of the wave).
+func spawn(data: EnemyData, start := 0.0, route := -1) -> Enemy:
+	if route < 0:
+		route = _next_route()
 	var enemy := Enemy.new()
-	enemy.setup(data, map.curve, 1.0 + level.hp_growth * maxi(wave_index, 0), start, randf_range(-0.3, 0.3))
+	enemy.setup(data, map.routes[route], level.hp_multiplier(wave_index), start, randf_range(-0.3, 0.3))
+	enemy.route = route
 	enemy.summon_requested.connect(_on_summon_requested)
 	_enemies_parent.add_child(enemy)
 	if start == 0.0:
@@ -68,6 +74,13 @@ func spawn(data: EnemyData, start := 0.0) -> Enemy:
 	return enemy
 
 
+func _next_route() -> int:
+	if _route_bag.is_empty():
+		_route_bag = range(map.routes.size())
+		_route_bag.shuffle()
+	return _route_bag.pop_back()
+
+
 func _on_summon_requested(boss: Enemy) -> void:
 	for i in boss.data.summon_count:
-		spawn(boss.data.summon, maxf(boss.progress - 0.7 * (i + 1), 0.01))
+		spawn(boss.data.summon, maxf(boss.progress - 0.7 * (i + 1), 0.01), boss.route)

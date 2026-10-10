@@ -21,6 +21,8 @@ var progress := 0.0
 var alive := true
 ## Sideways offset from the path centre so a crowd does not walk in single file.
 var lane := 0.0
+## Index of the map route this enemy follows.
+var route := 0
 
 var _curve: Curve3D
 var _length := 0.0
@@ -100,6 +102,11 @@ func _update_transform() -> void:
 	dir = dir.normalized()
 	global_position = pos + dir.cross(Vector3.UP) * lane
 	global_basis = Basis.looking_at(dir, Vector3.UP, true)
+
+
+## Metres left to the castle gate (towers aim at whoever is closest to it).
+func remaining_distance() -> float:
+	return _length - progress
 
 
 ## Where the enemy will be in `seconds` if nothing slows it down (for lobbed shots).

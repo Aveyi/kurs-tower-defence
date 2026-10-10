@@ -44,7 +44,7 @@ func _ready() -> void:
 	spawner.wave_started.connect(func(i: int) -> void: wave_started.emit(i, spawner.wave_count()))
 	spawner.wave_cleared.connect(_on_wave_cleared)
 	var rect := map.bounds()
-	camera_rig.setup(rect, Vector3(rect.get_center().x, 0, rect.get_center().y + 1.0), 26.0)
+	camera_rig.setup(rect, Vector3(rect.get_center().x, 0, rect.get_center().y + 1.0), 38.0)
 	build.setup(self)
 	hud.setup(self)
 	_countdown = FIRST_WAVE_DELAY

@@ -13,7 +13,7 @@ script = ExtResource("2_level")
 model = ExtResource("5_model1")
 cost = 110
 damage = 90.0
-attack_range = 13.0
+attack_range = 11.5
 fire_rate = 0.35
 
 [sub_resource type="Resource" id="Resource_level2"]
@@ -21,7 +21,7 @@ script = ExtResource("2_level")
 model = ExtResource("6_model2")
 cost = 140
 damage = 170.0
-attack_range = 14.5
+attack_range = 12.5
 fire_rate = 0.38
 
 [sub_resource type="Resource" id="Resource_level3"]
@@ -29,7 +29,7 @@ script = ExtResource("2_level")
 model = ExtResource("7_model3")
 cost = 220
 damage = 300.0
-attack_range = 16.0
+attack_range = 14.0
 fire_rate = 0.42
 
 [resource]

@@ -10,6 +10,7 @@ var game
 var frame := 0
 var shots := 0
 var closeups := 0
+var _free_plot
 var summoned := 0
 
 
@@ -39,23 +40,21 @@ func _tick() -> void:
 			return
 		game.spawner.enemy_spawned.connect(func(e) -> void: summoned += int(e.progress > 0.0))
 		game.gold = 5000
-		for spec in [["archer", Vector2i(2, 2)], ["cannon", Vector2i(6, 2)], ["mage", Vector2i(9, 3)],
-				["ice", Vector2i(11, 3)], ["ballista", Vector2i(6, 5)], ["archer", Vector2i(11, 5)]]:
-			var data = load("res://data/towers/%s.tres" % spec[0])
-			assert(game.build_tower(data, spec[1]) != null, "could not build %s" % spec[0])
-		game.upgrade_tower(game.tower_at(Vector2i(9, 3)))
-		game.upgrade_tower(game.tower_at(Vector2i(9, 3)))
-		if waves_to_run > 3:  # a full run: max out a bigger defence
-			for spec in [["mage", Vector2i(4, 3)], ["cannon", Vector2i(3, 4)], ["ballista", Vector2i(11, 1)]]:
-				game.build_tower(load("res://data/towers/%s.tres" % spec[0]), spec[1])
-			for tower in game.get_node("Towers").get_children():
+		var plots := ranked_plots(game.map, 7.0)
+		var kinds := ["archer", "cannon", "mage", "ice", "ballista", "archer", "cannon", "mage", "ice", "archer"]
+		var count := 10 if waves_to_run > 3 else 6
+		for i in count:
+			assert(game.build_tower(load("res://data/towers/%s.tres" % kinds[i]), plots[i]) != null, "could not build")
+		for tower in game.get_node("Towers").get_children():
+			game.upgrade_tower(tower)
+			if waves_to_run > 3:  # a full run: max out the defence
 				game.upgrade_tower(tower)
-				game.upgrade_tower(tower)
-		game.build.select_tower(game.tower_at(Vector2i(9, 3)))
+		game.build.select_tower(game.tower_at(plots[2]))
+		_free_plot = plots[count]
 	elif frame == 40:
 		_shot("built")
 		game.build.clear()
-		game.build.select_plot(Vector2i(4, 3))
+		game.build.select_plot(_free_plot)
 	elif frame == 60:
 		_shot("build_panel")
 		game.build.clear()
@@ -88,3 +87,23 @@ func _tick() -> void:
 	if frame > 60000:
 		print("TIMEOUT")
 		quit(1)
+
+
+## Tower plots sorted by how much of the enemy routes they cover within `reach` metres.
+static func ranked_plots(map, reach: float) -> Array:
+	var samples := []
+	for curve in map.routes:
+		var length: float = curve.get_baked_length()
+		for d in range(0, int(length), 2):
+			var p: Vector3 = curve.sample_baked(d)
+			if not samples.any(func(q) -> bool: return q.distance_to(p) < 1.0):
+				samples.append(p)
+	var plots := []
+	for row in map.size.y:
+		for col in map.size.x:
+			var cell := Vector2i(col, row)
+			if map.is_plot(cell):
+				var at: Vector3 = map.cell_center(cell)
+				plots.append([samples.filter(func(q) -> bool: return q.distance_to(at) <= reach).size(), cell])
+	plots.sort_custom(func(a, b) -> bool: return a[0] > b[0])
+	return plots.map(func(p): return p[1])

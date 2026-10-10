@@ -122,8 +122,9 @@ func _is_valid(enemy: Enemy) -> bool:
 	return is_instance_valid(enemy) and enemy.alive and _in_range(enemy)
 
 
-## Picks a target in range: the enemy closest to the castle (furthest along the path),
-## or for snipers the one with the most health left.
+## Picks a target in range: the enemy with the least way left to the castle (routes differ in
+## length, so this is not the same as the distance already walked), or for snipers the one
+## with the most health left.
 func _find_target() -> Enemy:
 	var best: Enemy = null
 	var strongest := data.priority == TowerData.Priority.STRONGEST
@@ -135,7 +136,7 @@ func _find_target() -> Enemy:
 			elif strongest and not is_equal_approx(enemy.hp, best.hp):
 				if enemy.hp > best.hp:
 					best = enemy
-			elif enemy.progress > best.progress:
+			elif enemy.remaining_distance() < best.remaining_distance():
 				best = enemy
 	return best
 
