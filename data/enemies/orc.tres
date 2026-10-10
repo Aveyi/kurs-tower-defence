@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://models/enemies/orc.glb" id="2_model"]
+[ext_resource type="Texture2D" path="res://assets/ui/icons/orc.png" id="3_icon"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"orc"
+display_name = "Орк"
+icon = ExtResource("3_icon")
+model = ExtResource("2_model")
+max_hp = 110.0
+speed = 1.7
+anim_speed = 0.95
+reward = 9
+damage = 1
+flying = false
+is_boss = false
+hp_bar_height = 1.95
+aim_height = 0.95

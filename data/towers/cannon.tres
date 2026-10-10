@@ -1,0 +1,49 @@
+[gd_resource type="Resource" script_class="TowerData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/tower_data.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/data/tower_level.gd" id="2_level"]
+[ext_resource type="PackedScene" path="res://models/projectiles/bomb.glb" id="3_projectile"]
+[ext_resource type="Texture2D" path="res://assets/ui/icons/cannon.png" id="4_icon"]
+[ext_resource type="PackedScene" path="res://models/towers/cannon_1.glb" id="5_model1"]
+[ext_resource type="PackedScene" path="res://models/towers/cannon_2.glb" id="6_model2"]
+[ext_resource type="PackedScene" path="res://models/towers/cannon_3.glb" id="7_model3"]
+
+[sub_resource type="Resource" id="Resource_level1"]
+script = ExtResource("2_level")
+model = ExtResource("5_model1")
+cost = 100
+damage = 30.0
+attack_range = 6.5
+fire_rate = 0.5
+splash_radius = 1.8
+
+[sub_resource type="Resource" id="Resource_level2"]
+script = ExtResource("2_level")
+model = ExtResource("6_model2")
+cost = 120
+damage = 55.0
+attack_range = 7.0
+fire_rate = 0.55
+splash_radius = 2.0
+
+[sub_resource type="Resource" id="Resource_level3"]
+script = ExtResource("2_level")
+model = ExtResource("7_model3")
+cost = 200
+damage = 90.0
+attack_range = 7.5
+fire_rate = 0.6
+splash_radius = 2.4
+
+[resource]
+script = ExtResource("1_script")
+id = &"cannon"
+display_name = "Пушка"
+description = "Бомбы бьют по площади — против толп. Не достаёт летающих."
+icon = ExtResource("4_icon")
+targets = 1
+projectile = ExtResource("3_projectile")
+projectile_speed = 9.0
+ballistic = true
+impact_color = Color(1.0, 0.55, 0.2, 1)
+levels = Array[ExtResource("2_level")]([SubResource("Resource_level1"), SubResource("Resource_level2"), SubResource("Resource_level3")])

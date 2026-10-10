@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://models/enemies/necromancer.glb" id="2_model"]
+[ext_resource type="Texture2D" path="res://assets/ui/icons/necromancer.png" id="3_icon"]
+[ext_resource type="Resource" path="res://data/enemies/goblin.tres" id="4_summon"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"necromancer"
+display_name = "Некромант"
+icon = ExtResource("3_icon")
+model = ExtResource("2_model")
+max_hp = 2600.0
+speed = 0.8
+anim_speed = 1.0
+reward = 200
+damage = 15
+flying = false
+is_boss = true
+hp_bar_height = 3.5
+aim_height = 1.7
+summon = ExtResource("4_summon")
+summon_count = 3
+summon_interval = 7.0
