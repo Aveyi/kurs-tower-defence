@@ -14,8 +14,12 @@ extends Resource
 @export var rocks: PackedStringArray = ["rock_3", "rock_2"]
 ## Placed around the castle, each once.
 @export var castle_props: PackedStringArray = ["crates", "well", "fence", "lamppost"]
-## Occasional light next to the road.
+## Occasional light next to the road ("" = none).
 @export var road_light := "lamppost"
+## Prop on the lantern cells ("L") of the layout: lights placed by hand along the road.
+@export var lantern := ""
+## A prop at a corner of every tower plot, turned toward the plot (e.g. a lantern leaning over it; "" = none).
+@export var plot_prop := ""
 ## Landmark cells ("R"): one each, in random order without repeats until all are used.
 @export var landmarks: PackedStringArray = []
 ## Cemetery cells ("G"): graves tiles (placed unrotated: the graves face south) ...

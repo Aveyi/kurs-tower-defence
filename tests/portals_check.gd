@@ -73,6 +73,7 @@ func _tick() -> void:
 		game.start_next_wave()
 		_check(not game.map.portal_open[1], "still sealed during wave %d" % (game.spawner.wave_index + 1))
 		_check(game.spawner.portal_opens_next == 1, "warned one wave ahead (wave %d)" % (game.spawner.wave_index + 1))
+		_check(game.map._vortices[1][0].visible, "the stirring portal already looks open (vortex shown)")
 		game.spawner.wave_running = false
 		game.start_next_wave()
 		_check(game.map.portal_open[1] and game.spawner.opened_portal == 1,

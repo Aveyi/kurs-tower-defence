@@ -10,6 +10,7 @@ extends Resource
 ##   G  cemetery (graves tiles, fenced; a gate where a road enters it)
 ##   R  landmark (one big piece from the theme: ruins, crypt, standing stones...)
 ##   s  sealed enemy portal (road start): opens at wave `sealed_portal_wave`
+##   L  lantern beside the road (the theme's `lantern`)
 ## Roads may fork and rejoin: enemies are spread over every route from the portal to the gate.
 ## Keep separate branches from touching each other sideways, or the tiles will join them.
 

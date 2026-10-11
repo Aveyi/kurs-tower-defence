@@ -33,11 +33,11 @@ HAUNT = dict(
     rune=GLOW)
 
 
-def _model(name, seed, **kw):
+def _model(name, seed, glow=GLOW, glow_strength=GLOW_STRENGTH, **kw):
     pal = dict(KINGDOM)
     pal.update(ENV)
     pal.update(HAUNT)
-    m = Model(name, pal, glow_color=GLOW, glow_strength=GLOW_STRENGTH, metal=METALS, foliage=FOLIAGE + ("hang",),
+    m = Model(name, pal, glow_color=glow, glow_strength=glow_strength, metal=METALS, foliage=FOLIAGE + ("hang",),
               rig=False, seed=seed, **kw)
     m.bone("root", (0, 0, 0))
     return m
@@ -534,9 +534,11 @@ def cemetery_gate():
     return m
 
 
-def ghost_lantern():
-    """Crooked wooden post with a hanging lantern - the level 2 roadside light."""
-    m = _model("GhostLantern", seed=2320)
+def ghost_lantern(warm=False):
+    """Crooked wooden post with a hanging lantern. The ghost one burns violet; the warm one (yellow fire like the
+    castle's braziers) stands at the tower plots, its lantern leaning over the plot."""
+    m = _model("PlotLantern" if warm else "GhostLantern", seed=2320, glow="#FFB347" if warm else GLOW,
+               glow_strength=4.0 if warm else GLOW_STRENGTH)
     m.seg("root", "wood", (0, 0, 0), (0.04, 0.02, 0.9), 0.06, 0.05, n=6, jitter=0.004)
     m.seg("root", "wood", (0.04, 0.02, 0.9), (-0.02, 0, 1.75), 0.05, 0.04, n=6, jitter=0.004)
     m.seg("root", "wood", (-0.02, 0, 1.62), (0.3, 0, 1.78), 0.035, 0.028, n=5)
@@ -816,7 +818,7 @@ PROPS = dict(
     hollow_stump=hollow_stump, dead_bush=dead_bush, glow_mushrooms=glow_mushrooms,
     grave_1=partial(grave, 1), grave_2=partial(grave, 2), grave_3=partial(grave, 3), grave_open=grave_open,
     crypt=crypt, obelisk=obelisk, cemetery_fence=cemetery_fence, cemetery_gate=cemetery_gate,
-    ghost_lantern=ghost_lantern, ruin_columns=ruin_columns, ruin_arch=ruin_arch, ruin_wall=ruin_wall,
+    ghost_lantern=ghost_lantern, plot_lantern=partial(ghost_lantern, True), ruin_columns=ruin_columns, ruin_arch=ruin_arch, ruin_wall=ruin_wall,
     ritual_stones=ritual_stones, bones=bones, scarecrow=scarecrow, witch_cauldron=witch_cauldron)
 
 

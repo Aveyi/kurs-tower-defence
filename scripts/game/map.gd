@@ -143,14 +143,14 @@ func stir_portal(index: int) -> void:
 	Effects.burst(self, &"portal", at, 1.2)
 	Effects.burst(self, &"debris", portals[index].global_position + Vector3.UP * 0.3, 0.6)
 	Audio.play(&"portal_spawn", -2.0)
+	_show_vortex(index)  # it looks open from now on; enemies only come out once it really opens
 	portal_stirring.emit(index)
 
 
-## Opens a sealed portal: the vortex flares up and enemies may come out of it from now on.
-func open_portal(index: int) -> void:
-	if portal_open[index]:
+## The vortex of a sealed portal flares up (shown once: when it stirs, or when it opens without stirring).
+func _show_vortex(index: int) -> void:
+	if _vortices[index][0].visible:
 		return
-	portal_open[index] = true
 	var anim := _portal_anims[index]
 	anim.play(&"Spawn")
 	anim.queue(&"Idle")
@@ -159,6 +159,16 @@ func open_portal(index: int) -> void:
 		vortex.scale = Vector3.ONE * 0.05
 		create_tween().tween_property(vortex, "scale", Vector3.ONE, 0.8).set_trans(Tween.TRANS_BACK) \
 				.set_ease(Tween.EASE_OUT)
+
+
+## Opens a sealed portal: the vortex flares up and enemies may come out of it from now on.
+func open_portal(index: int) -> void:
+	if portal_open[index]:
+		return
+	portal_open[index] = true
+	_show_vortex(index)
+	_portal_anims[index].play(&"Spawn")
+	_portal_anims[index].queue(&"Idle")
 	var at := portals[index].global_position + Vector3.UP * 1.25
 	Effects.impact(self, at, Color(0.75, 0.3, 1.0), 2.0)
 	Effects.burst(self, &"portal", at, 2.0)
@@ -519,14 +529,48 @@ func _place_decor(rng: RandomNumberGenerator) -> void:
 					_prop(small[rng.randi() % small.size()], cell, rng)
 				"R":
 					_place_landmark(cell, rng)
+				"L":
+					_place_lantern(cell)
+				"P":
+					if not theme.plot_prop.is_empty():
+						_place_plot_prop(cell)
 				".":
 					if _near_castle(cell) and not castle_props.is_empty() and rng.randf() < 0.6:
 						_prop(castle_props.pop_back(), cell, rng, 0.35)
 					elif _near_road(cell):
-						if rng.randf() < 0.12:
+						if rng.randf() < 0.12 and not theme.road_light.is_empty():
 							_prop(theme.road_light, cell, rng, 0.3)
 					elif rng.randf() < 0.3:
 						_prop(small[rng.randi() % small.size()], cell, rng)
+
+
+## The theme's lantern on a lantern cell ("L"): beside the road, its +X (a lantern's arm) leaning over it.
+func _place_lantern(cell: Vector2i) -> void:
+	if theme.lantern.is_empty():
+		return
+	for d in DIRS:
+		if is_road(cell + d):
+			var toward := Vector3(d.x, 0, d.y)
+			_batch("prop:" + theme.lantern, TileLibrary.prop(theme.lantern), true,
+					Transform3D(Basis(Vector3.UP, atan2(-toward.z, toward.x)), cell_center(cell) + toward * 0.45))
+			return
+
+
+## The theme's plot prop at the very corner of a tower plot's cell, away from the road, its +X (a lantern's
+## arm) pointing out of the plot - so even the widest tower built on the plot never swallows the lantern.
+func _place_plot_prop(cell: Vector2i) -> void:
+	var corners: Array[Vector2i] = [Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1)]
+	var best := corners[0]
+	var best_score := -1
+	for c in corners:  # prefer a corner whose two neighbouring cells are not road
+		var score := int(not is_road(cell + Vector2i(c.x, 0))) + int(not is_road(cell + Vector2i(0, c.y)))
+		if score > best_score:
+			best = c
+			best_score = score
+	var corner := Vector3(best.x, 0, best.y) * (CELL / 2.0 - 0.04)
+	var yaw := atan2(-corner.z, corner.x)  # +X of the prop points away from the plot centre
+	_batch("prop:" + theme.plot_prop, TileLibrary.prop(theme.plot_prop), true,
+			Transform3D(Basis(Vector3.UP, yaw), cell_center(cell) + corner))
 
 
 ## One big piece per landmark cell ("R"): all of the theme's landmarks in random order before any repeats,

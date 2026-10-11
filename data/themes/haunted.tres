@@ -9,7 +9,8 @@ trees = PackedStringArray("gnarled_tree_1", "gnarled_tree_2", "dead_spruce", "gn
 small_props = PackedStringArray("dead_bush", "dead_bush", "glow_mushrooms", "bones", "rock_1", "rock_2", "hollow_stump", "grave_3")
 rocks = PackedStringArray("rock_3", "rock_2")
 castle_props = PackedStringArray("crates", "well", "ghost_lantern", "scarecrow")
-road_light = "ghost_lantern"
+road_light = ""
+lantern = "ghost_lantern"
 landmarks = PackedStringArray("ruin_columns", "ruin_arch", "ruin_wall", "ritual_stones", "crypt", "obelisk", "witch_cauldron", "grave_open")
 cemetery_tiles = PackedStringArray("haunt_graves_1", "haunt_graves_2", "haunt_graves_3")
 cemetery_fence = "cemetery_fence"
@@ -18,7 +19,7 @@ shadow_tiles = PackedStringArray("bridge", "haunt_graves_1", "haunt_graves_2", "
 prop_lights = {
 "cemetery_gate": [Vector3(0, 1.8, 0), Color(0.72, 0.45, 1, 1), 1.2, 4.5],
 "crypt": [Vector3(0, 0.7, 0.6), Color(0.72, 0.45, 1, 1), 1.6, 4.5],
-"ghost_lantern": [Vector3(0.48, 1.32, 0), Color(0.72, 0.45, 1, 1), 1.3, 5.0],
+"ghost_lantern": [Vector3(0.48, 1.32, 0), Color(0.72, 0.45, 1, 1), 1.0, 15.0],
 "glow_mushrooms": [Vector3(0, 0.3, 0), Color(0.72, 0.45, 1, 1), 0.5, 2.0],
 "obelisk": [Vector3(0, 1.3, 0.35), Color(0.72, 0.45, 1, 1), 0.6, 3.0],
 "ritual_stones": [Vector3(0, 0.5, 0), Color(0.72, 0.45, 1, 1), 1.2, 4.0],
