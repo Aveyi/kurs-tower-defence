@@ -216,5 +216,6 @@ start_gold = 250
 lives = 20
 hp_growth = 0.06
 hp_growth_power = 1.35
+enemy_hp_scale = 1.3
 decor_seed = 7
 waves = Array[ExtResource("2_wave")]([SubResource("Resource_wave1"), SubResource("Resource_wave2"), SubResource("Resource_wave3"), SubResource("Resource_wave4"), SubResource("Resource_wave5"), SubResource("Resource_wave6"), SubResource("Resource_wave7"), SubResource("Resource_wave8"), SubResource("Resource_wave9"), SubResource("Resource_wave10")])

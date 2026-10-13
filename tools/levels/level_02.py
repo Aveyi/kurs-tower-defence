@@ -29,6 +29,7 @@ START_GOLD = 350
 LIVES = 20
 HP_GROWTH = 0.05
 HP_GROWTH_POWER = 1.25
+ENEMY_HP_SCALE = 1.3
 DECOR_SEED = 13
 
 WAVES = [
@@ -83,7 +84,7 @@ def build():
             'preview = ExtResource("6_preview")', f"layout = PackedStringArray({layout})", 'music = &"battle_haunted"',
             'map_theme = ExtResource("4_theme")', 'lighting = ExtResource("5_lighting")', 'hud_style = &"haunted"',
             f"start_gold = {START_GOLD}", f"lives = {LIVES}", f"hp_growth = {HP_GROWTH}",
-            f"hp_growth_power = {HP_GROWTH_POWER}", f"sealed_portal_wave = {sealed_portal_wave()}",
+            f"hp_growth_power = {HP_GROWTH_POWER}", f"enemy_hp_scale = {ENEMY_HP_SCALE}", f"sealed_portal_wave = {sealed_portal_wave()}",
             f"decor_seed = {DECOR_SEED}", f"waves = Array[ExtResource(\"2_wave\")]([{waves}])", ""]
     path = os.path.join(ROOT, "data", "levels", "level_02.tres")
     with open(path, "w") as f:

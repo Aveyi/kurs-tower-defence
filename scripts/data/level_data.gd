@@ -34,10 +34,12 @@ extends Resource
 ## A power above 1 keeps the first waves gentle and makes the last ones much tougher.
 @export var hp_growth := 0.06
 @export var hp_growth_power := 1.0
+## Difficulty: every enemy's HP (bosses too) on top of the wave growth.
+@export var enemy_hp_scale := 1.0
 
 
 func hp_multiplier(wave_index: int) -> float:
-	return 1.0 + hp_growth * pow(maxi(wave_index, 0), hp_growth_power)
+	return enemy_hp_scale * (1.0 + hp_growth * pow(maxi(wave_index, 0), hp_growth_power))
 ## Wave (counted from 0) that opens the sealed portals ("s"); -1 = they are open from the start.
 @export var sealed_portal_wave := -1
 ## Seed for decorations (trees, rocks, grass variants).
